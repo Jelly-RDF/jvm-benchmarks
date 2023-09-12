@@ -34,8 +34,6 @@ object Util:
     implicit val formats: DefaultFormats.type = org.json4s.DefaultFormats
     val results = Map(
       "name" -> name,
-      "stream_opts" -> JellyOptionsFromTypesafe.fromTypesafeConfig(config),
-      "encoder_opts" -> EncoderFlow.Options(config),
       "result" -> result,
     )
 

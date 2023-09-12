@@ -16,6 +16,7 @@ import scala.collection.mutable
 import scala.collection.mutable.ArrayBuffer
 import scala.concurrent.ExecutionContext
 import scala.jdk.CollectionConverters.*
+import scala.util.Random
 
 object RawFlatSerDesBench:
   import Util.*
@@ -26,9 +27,10 @@ object RawFlatSerDesBench:
   implicit val ec: ExecutionContext = system.executionContext
 
   private var useQuads = false
-  private val experiments = jenaFormats.keys ++ jellyOptions.keys
+  private val experiments = Random.shuffle(jenaFormats.keys ++ jellyOptions.keys)
   private val times: Map[String, mutable.ArrayBuffer[Long]] = experiments.map(_ -> mutable.ArrayBuffer[Long]()).toMap
-  private var datasetSize: Long = 0
+  private var numStatements: Long = 0
+  private var numElements: Long = 0
 
   // Arguments: [ser/des] [source file path]
   def main(args: Array[String]): Unit =
@@ -39,9 +41,11 @@ object RawFlatSerDesBench:
     else if args(0) == "des" then
       mainDes(args(1))
 
-    printSpeed(datasetSize, times)
-    saveRunInfo(s"raw_${args(0)}", conf, Map(
-      "size" -> datasetSize,
+    printSpeed(numStatements, times)
+    saveRunInfo(s"flat_raw_${args(0)}", conf, Map(
+      "elements" -> numElements,
+      "statements" -> numStatements,
+      "order" -> experiments,
       "times" -> times,
       "file" -> args(1),
       "task" -> args(0),
@@ -68,7 +72,8 @@ object RawFlatSerDesBench:
           ts.foreach(dataset.add)
           dataset
         }).toSeq
-      datasetSize = items.map(_.size()).sum
+      numStatements = items.map(_.size()).sum
+      numElements = items.size
       items
     else
       val items = AsyncParser.asyncParseTriples(path).asScala
@@ -78,7 +83,8 @@ object RawFlatSerDesBench:
           ts.foreach(model.getGraph.add)
           model
       }).toSeq
-      datasetSize = items.map(_.size()).sum
+      numStatements = items.map(_.size()).sum
+      numElements = items.size
       items
 
   private def mainSer(path: String): Unit =
@@ -95,9 +101,15 @@ object RawFlatSerDesBench:
           serJelly(sourceData, getJellyOpts(experiment), frame => frame.writeTo(stream))
         }
       else
-        times(experiment) += time {
-          for item <- sourceData do
-            serJena(item, getFormat(experiment), OutputStream.nullOutputStream)
+        try {
+          times(experiment) += time {
+            for item <- sourceData do
+              serJena(item, getFormat(experiment), OutputStream.nullOutputStream)
+          }
+        } catch {
+          case e: Exception =>
+            println(f"Failed to serialize with $experiment")
+            println(e)
         }
 
   private def mainDes(path: String): Unit =
@@ -105,34 +117,38 @@ object RawFlatSerDesBench:
 
     for experiment <- experiments do
       println("Serializing to memory...")
-      val serialized = {
-        if experiment.startsWith("jelly") then
-          val serBuffer = ArrayBuffer[Array[Byte]]()
-          serJelly(source, getJellyOpts(experiment), frame => serBuffer.append(frame.toByteArray))
-          serBuffer
-        else
-          val serBuffer = ArrayBuffer[Array[Byte]]()
-          for model <- source do
-            val oStream = new ByteArrayOutputStream()
-            serJena(model, getFormat(experiment), oStream)
-            serBuffer.append(oStream.toByteArray)
-          serBuffer
-      }
+      try {
+        val serialized = {
+          if experiment.startsWith("jelly") then
+            val serBuffer = ArrayBuffer[Array[Byte]]()
+            serJelly(source, getJellyOpts(experiment), frame => serBuffer.append(frame.toByteArray))
+            serBuffer
+          else
+            val serBuffer = ArrayBuffer[Array[Byte]]()
+            for model <- source do
+              val oStream = new ByteArrayOutputStream()
+              serJena(model, getFormat(experiment), oStream)
+              serBuffer.append(oStream.toByteArray)
+            serBuffer
+        }
 
-      for i <- 1 to REPEATS do
-        System.gc()
-        println("Sleeping 3 seconds...")
-        Thread.sleep(3000)
-        println(f"Try: $i, experiment: $experiment")
-        if experiment.startsWith("jelly") then
-          times(experiment) += time {
-            desJelly(serialized, useQuads)
-          }
-        else
-          times(experiment) += time {
-            for buffer <- serialized do
-              desJena(new ByteArrayInputStream(buffer), getFormat(experiment))
-          }
+        for i <- 1 to REPEATS do
+          System.gc()
+          println("Sleeping 3 seconds...")
+          Thread.sleep(3000)
+          println(f"Try: $i, experiment: $experiment")
+          if experiment.startsWith("jelly") then
+            times(experiment) += time {
+              desJelly(serialized, useQuads)
+            }
+          else
+            times(experiment) += time {
+              for buffer <- serialized do
+                desJena(new ByteArrayInputStream(buffer), getFormat(experiment))
+            }
+      } catch {
+        case _: Exception => println(f"Failed experiment with $experiment")
+      }
 
   private def serJelly(
     sourceData: Seq[Model | DatasetGraph], opt: RdfStreamOptions, closure: RdfStreamFrame => Unit

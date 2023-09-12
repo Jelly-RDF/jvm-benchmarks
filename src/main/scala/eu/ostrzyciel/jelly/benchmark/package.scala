@@ -7,17 +7,18 @@ import scala.collection.mutable
 import scala.concurrent.duration.*
 
 package object benchmark:
-  val REPEATS = 5
+  val REPEATS = 2
 
   val jenaFormats = Map(
     // Use a non-pretty variant of RDF/XML
-    // TODO: catch exceptions and re-enable xml
-    // "rdf-xml" -> (RDFFormat.RDFXML_PLAIN, RDFFormat.RDFXML_PLAIN),
-    "turtle-pretty" -> (RDFFormat.TURTLE_PRETTY, RDFFormat.TRIG_PRETTY),
-    "turtle-blocks" -> (RDFFormat.TURTLE_BLOCKS, RDFFormat.TRIG_BLOCKS),
-    "nt" -> (RDFFormat.NTRIPLES, RDFFormat.NQUADS),
-    "jena-proto" -> (RDFFormat.RDF_PROTO, RDFFormat.RDF_PROTO),
-    // TODO: add Thrift here?
+    // RDF/XML is abysmally slow and it doesn't even support quads...
+    // "jena-rdf-xml" -> (RDFFormat.RDFXML_PLAIN, RDFFormat.RDFXML_PLAIN),
+    "jena-turtle-pretty" -> (RDFFormat.TURTLE_PRETTY, RDFFormat.TRIG_PRETTY),
+    "jena-turtle-blocks" -> (RDFFormat.TURTLE_BLOCKS, RDFFormat.TRIG_BLOCKS),
+    "jena-nt" -> (RDFFormat.NTRIPLES, RDFFormat.NQUADS),
+    "jena-protobuf" -> (RDFFormat.RDF_PROTO, RDFFormat.RDF_PROTO),
+    // The TriX implementation in Jena is kinda buggy, it breaks on some encoding issues
+    // "jena-trix" -> (RDFFormat.TRIX, RDFFormat.TRIX),
   )
 
   val jellyOptions = Map(

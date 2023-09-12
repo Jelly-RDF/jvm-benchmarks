@@ -3,9 +3,11 @@ package eu.ostrzyciel.jelly.benchmark
 import com.typesafe.config.ConfigFactory
 import eu.ostrzyciel.jelly.convert.jena.JenaConverterFactory
 import eu.ostrzyciel.jelly.core.proto.v1.{RdfStreamFrame, RdfStreamOptions, RdfStreamType}
+import org.apache.jena.query.DatasetFactory
 import org.apache.jena.rdf.model.{Model, ModelFactory}
 import org.apache.jena.riot.system.AsyncParser
 import org.apache.jena.riot.{RDFFormat, RDFWriter}
+import org.apache.jena.sparql.core.DatasetGraph
 import org.apache.pekko.actor.typed.ActorSystem
 import org.apache.pekko.actor.typed.scaladsl.Behaviors
 
@@ -15,7 +17,6 @@ import scala.collection.mutable.ArrayBuffer
 import scala.concurrent.ExecutionContext
 import scala.jdk.CollectionConverters.*
 
-// TODO: quad support
 object RawFlatSerDesBench:
   import Util.*
 
@@ -27,7 +28,7 @@ object RawFlatSerDesBench:
   private var useQuads = false
   private val experiments = jenaFormats.keys ++ jellyOptions.keys
   private val times: Map[String, mutable.ArrayBuffer[Long]] = experiments.map(_ -> mutable.ArrayBuffer[Long]()).toMap
-  private var modelSize: Long = 0
+  private var datasetSize: Long = 0
 
   // Arguments: [ser/des] [source file path]
   def main(args: Array[String]): Unit =
@@ -38,9 +39,9 @@ object RawFlatSerDesBench:
     else if args(0) == "des" then
       mainDes(args(1))
 
-    printSpeed(modelSize, times)
+    printSpeed(datasetSize, times)
     saveRunInfo(s"raw_${args(0)}", conf, Map(
-      "size" -> modelSize,
+      "size" -> datasetSize,
       "times" -> times,
       "file" -> args(1),
       "task" -> args(0),
@@ -57,21 +58,31 @@ object RawFlatSerDesBench:
       else RdfStreamType.RDF_STREAM_TYPE_TRIPLES
     )
 
-  private def getSourceModels(path: String): Seq[Model] =
+  private def getSourceFlat(path: String): Seq[Model | DatasetGraph] =
     println("Loading the source file...")
-    val models = AsyncParser.asyncParseTriples(path).asScala
-      .grouped(1000)
-      .map(ts => {
-        val model = ModelFactory.createDefaultModel()
-        ts.foreach(model.getGraph.add)
-        model
-      })
-      .toSeq
-    modelSize = models.map(_.size()).sum
-    models
+    if useQuads then
+      val items = AsyncParser.asyncParseQuads(path).asScala
+        .grouped(1000)
+        .map(ts => {
+          val dataset = DatasetFactory.create().asDatasetGraph()
+          ts.foreach(dataset.add)
+          dataset
+        }).toSeq
+      datasetSize = items.map(_.size()).sum
+      items
+    else
+      val items = AsyncParser.asyncParseTriples(path).asScala
+        .grouped(1000)
+        .map(ts => {
+          val model = ModelFactory.createDefaultModel()
+          ts.foreach(model.getGraph.add)
+          model
+      }).toSeq
+      datasetSize = items.map(_.size()).sum
+      items
 
   private def mainSer(path: String): Unit =
-    val sourceModels = getSourceModels(path)
+    val sourceData = getSourceFlat(path)
 
     for i <- 1 to REPEATS; experiment <- experiments do
       System.gc()
@@ -81,20 +92,19 @@ object RawFlatSerDesBench:
       if experiment.startsWith("jelly") then
         val stream = OutputStream.nullOutputStream
         times(experiment) += time {
-          serJelly(sourceModels, getJellyOpts(experiment), frame => frame.writeTo(stream))
+          serJelly(sourceData, getJellyOpts(experiment), frame => frame.writeTo(stream))
         }
       else
         times(experiment) += time {
-          for model <- sourceModels do
-            serJena(model, getFormat(experiment), OutputStream.nullOutputStream)
+          for item <- sourceData do
+            serJena(item, getFormat(experiment), OutputStream.nullOutputStream)
         }
 
   private def mainDes(path: String): Unit =
-    val source = getSourceModels(path)
+    val source = getSourceFlat(path)
 
     for experiment <- experiments do
       println("Serializing to memory...")
-      // TODO: check and report serialized sizes
       val serialized = {
         if experiment.startsWith("jelly") then
           val serBuffer = ArrayBuffer[Array[Byte]]()
@@ -124,22 +134,35 @@ object RawFlatSerDesBench:
               desJena(new ByteArrayInputStream(buffer), getFormat(experiment))
           }
 
-  private def serJelly(sourceModels: Seq[Model], opt: RdfStreamOptions, closure: RdfStreamFrame => Unit): Unit =
+  private def serJelly(
+    sourceData: Seq[Model | DatasetGraph], opt: RdfStreamOptions, closure: RdfStreamFrame => Unit
+  ): Unit =
     val encoder = JenaConverterFactory.encoder(opt)
-    sourceModels
-      .map(m => {
-        val rows = m.getGraph.find().asScala
-          .flatMap(triple => encoder.addTripleStatement(triple))
-          .toSeq
-        RdfStreamFrame(rows)
-      })
-      .foreach(closure)
+    if !useQuads then
+      sourceData.asInstanceOf[Seq[Model]]
+        .map(m => {
+          val rows = m.getGraph.find().asScala
+            .flatMap(triple => encoder.addTripleStatement(triple))
+            .toSeq
+          RdfStreamFrame(rows)
+        })
+        .foreach(closure)
+    else
+      sourceData.asInstanceOf[Seq[DatasetGraph]]
+        .map(m => {
+          val rows = m.find().asScala
+            .flatMap(quad => encoder.addQuadStatement(quad))
+            .toSeq
+          RdfStreamFrame(rows)
+        })
+        .foreach(closure)
 
-  private def serJena(sourceModel: Model, format: RDFFormat, outputStream: OutputStream): Unit =
-    RDFWriter.create()
-      .format(format)
-      .source(sourceModel.getGraph)
-      .output(outputStream)
+  private def serJena(sourceData: Model | DatasetGraph, format: RDFFormat, outputStream: OutputStream): Unit =
+    val writer = RDFWriter.create().format(format)
+    sourceData match
+      case model: Model => writer.source(model.getGraph)
+      case dataset: DatasetGraph => writer.source(dataset)
+    writer.output(outputStream)
 
   private def desJelly(input: Iterable[Array[Byte]], quads: Boolean): Unit =
     val decoder = if quads then JenaConverterFactory.quadsDecoder
@@ -150,5 +173,7 @@ object RawFlatSerDesBench:
       .foreach(_ => {})
 
   private def desJena(input: InputStream, format: RDFFormat): Unit =
-    AsyncParser.asyncParseTriples(input, format.getLang, "")
-      .forEachRemaining(_ => {})
+    (
+      if !useQuads then AsyncParser.asyncParseTriples(input, format.getLang, "")
+      else AsyncParser.asyncParseQuads(input, format.getLang, "")
+    ).forEachRemaining(_ => {})

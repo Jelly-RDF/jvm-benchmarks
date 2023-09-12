@@ -21,7 +21,7 @@ object Util:
     t1 - t0
 
   def printSpeed(size: Long, times: Map[String, Iterable[Long]]): Unit =
-    println("Triples: " + size)
+    println("Statements: " + size)
     for exp -> results <- times do
       println("Experiment: " + exp)
       val avgTime = (results.sum / results.size) / 1_000_000d

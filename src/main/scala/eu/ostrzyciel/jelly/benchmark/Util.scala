@@ -20,12 +20,15 @@ object Util:
     val t1 = System.nanoTime()
     t1 - t0
 
-  def printSpeed(size: Long, times: Iterable[Long]): Unit =
+  def printSpeed(size: Long, times: Map[String, Iterable[Long]]): Unit =
     println("Triples: " + size)
-    val avgTime = (times.sum / times.size) / 1_000_000d
-    println("Average time (ms): " + avgTime)
-    println("Average " + size / avgTime + " kTriples/s")
-    println("Times (ns): " + times)
+    for exp -> results <- times do
+      println("Experiment: " + exp)
+      val avgTime = (results.sum / results.size) / 1_000_000d
+      println("Average time (ms): " + avgTime)
+      println("Average " + size / avgTime + " kTriples/s")
+      println("Times (ns): " + results)
+      println()
 
   def saveRunInfo[T](name: String, config: Config, result: T): Unit =
     implicit val formats: DefaultFormats.type = org.json4s.DefaultFormats

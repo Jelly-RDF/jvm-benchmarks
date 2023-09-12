@@ -2,8 +2,7 @@ package eu.ostrzyciel.jelly.benchmark
 
 import com.typesafe.config.ConfigFactory
 import eu.ostrzyciel.jelly.convert.jena.JenaConverterFactory
-import eu.ostrzyciel.jelly.core.proto.v1.RdfStreamFrame
-import eu.ostrzyciel.jelly.stream.JellyOptionsFromTypesafe
+import eu.ostrzyciel.jelly.core.proto.v1.{RdfStreamFrame, RdfStreamOptions, RdfStreamType}
 import org.apache.jena.rdf.model.{Model, ModelFactory}
 import org.apache.jena.riot.system.AsyncParser
 import org.apache.jena.riot.{RDFFormat, RDFWriter}
@@ -16,40 +15,51 @@ import scala.collection.mutable.ArrayBuffer
 import scala.concurrent.ExecutionContext
 import scala.jdk.CollectionConverters.*
 
+// TODO: quad support
 object RawFlatSerDesBench:
   import Util.*
 
-  val conf = ConfigFactory.load()
-  implicit val system: ActorSystem[Nothing] = ActorSystem(Behaviors.empty, "RawSerDesBench", conf)
+  private val conf = ConfigFactory.load()
+
+  implicit val system: ActorSystem[Nothing] = ActorSystem(Behaviors.empty, "RawFlatSerDesBench", conf)
   implicit val ec: ExecutionContext = system.executionContext
 
-  val times = mutable.ArrayBuffer.empty[Long]
-  var modelSize: Long = 0
+  private var useQuads = false
+  private val experiments = jenaFormats.keys ++ jellyOptions.keys
+  private val times: Map[String, mutable.ArrayBuffer[Long]] = experiments.map(_ -> mutable.ArrayBuffer[Long]()).toMap
+  private var modelSize: Long = 0
 
-  // Arguments: [ser/des] [method] [source file path]
+  // Arguments: [ser/des] [source file path]
   def main(args: Array[String]): Unit =
+    if args(1).contains(".nq") then useQuads = true
+
     if args(0) == "ser" then
-      mainSer(args)
+      mainSer(args(1))
     else if args(0) == "des" then
-      mainDes(args)
+      mainDes(args(1))
 
     printSpeed(modelSize, times)
     saveRunInfo(s"raw_${args(0)}", conf, Map(
       "size" -> modelSize,
       "times" -> times,
-      "method" -> args(1),
-      "file" -> args(2),
+      "file" -> args(1),
       "task" -> args(0),
     ))
     sys.exit()
 
-  private def getFormat(args: Array[String]): RDFFormat =
-    val tuple = jenaFormats(args(1))
-    if args(2).contains(".nt") then tuple(0) else tuple(1)
+  private def getFormat(exp: String): RDFFormat =
+    val tuple = jenaFormats(exp)
+    if useQuads then tuple(1) else tuple(0)
 
-  private def getSourceModels(args: Array[String]): Seq[Model] =
+  private def getJellyOpts(exp: String): RdfStreamOptions =
+    jellyOptions(exp).withStreamType(
+      if useQuads then RdfStreamType.RDF_STREAM_TYPE_QUADS
+      else RdfStreamType.RDF_STREAM_TYPE_TRIPLES
+    )
+
+  private def getSourceModels(path: String): Seq[Model] =
     println("Loading the source file...")
-    val models = AsyncParser.asyncParseTriples(args(2)).asScala
+    val models = AsyncParser.asyncParseTriples(path).asScala
       .grouped(1000)
       .map(ts => {
         val model = ModelFactory.createDefaultModel()
@@ -60,69 +70,65 @@ object RawFlatSerDesBench:
     modelSize = models.map(_.size()).sum
     models
 
-  private def mainSer(args: Array[String]): Unit =
-    val sourceModels = getSourceModels(args)
+  private def mainSer(path: String): Unit =
+    val sourceModels = getSourceModels(path)
 
-    for i <- 1 to REPEATS do
+    for i <- 1 to REPEATS; experiment <- experiments do
       System.gc()
       println("Sleeping 3 seconds...")
       Thread.sleep(3000)
-      println("Try: " + i)
-      if args(1) == "jelly" then
+      println(f"Try: $i, experiment: $experiment")
+      if experiment.startsWith("jelly") then
         val stream = OutputStream.nullOutputStream
-        times += time {
-          serJelly(sourceModels, frame => frame.writeTo(stream))
+        times(experiment) += time {
+          serJelly(sourceModels, getJellyOpts(experiment), frame => frame.writeTo(stream))
         }
       else
-        times += time {
+        times(experiment) += time {
           for model <- sourceModels do
-            serJena(model, getFormat(args), OutputStream.nullOutputStream)
+            serJena(model, getFormat(experiment), OutputStream.nullOutputStream)
         }
 
-  private def mainDes(args: Array[String]): Unit =
-    println("Serializing to memory...")
+  private def mainDes(path: String): Unit =
+    val source = getSourceModels(path)
 
-    if args(1) == "jelly" then
+    for experiment <- experiments do
+      println("Serializing to memory...")
+      // TODO: check and report serialized sizes
       val serialized = {
-        val serBuffer = ArrayBuffer[Array[Byte]]()
-        serJelly(getSourceModels(args), frame => serBuffer.append(frame.toByteArray))
-        serBuffer
+        if experiment.startsWith("jelly") then
+          val serBuffer = ArrayBuffer[Array[Byte]]()
+          serJelly(source, getJellyOpts(experiment), frame => serBuffer.append(frame.toByteArray))
+          serBuffer
+        else
+          val serBuffer = ArrayBuffer[Array[Byte]]()
+          for model <- source do
+            val oStream = new ByteArrayOutputStream()
+            serJena(model, getFormat(experiment), oStream)
+            serBuffer.append(oStream.toByteArray)
+          serBuffer
       }
 
       for i <- 1 to REPEATS do
         System.gc()
         println("Sleeping 3 seconds...")
         Thread.sleep(3000)
-        println("Try: " + i)
-        times += time {
-          desJelly(serialized, args(2).contains(".nq"))
-        }
+        println(f"Try: $i, experiment: $experiment")
+        if experiment.startsWith("jelly") then
+          times(experiment) += time {
+            desJelly(serialized, useQuads)
+          }
+        else
+          times(experiment) += time {
+            for buffer <- serialized do
+              desJena(new ByteArrayInputStream(buffer), getFormat(experiment))
+          }
 
-    else
-      val serBuffer = ArrayBuffer[Array[Byte]]()
-      for model <- getSourceModels(args) do
-        val oStream = new ByteArrayOutputStream()
-        serJena(model, getFormat(args), oStream)
-        serBuffer.append(oStream.toByteArray)
-
-      for i <- 1 to REPEATS do
-        System.gc()
-        println("Sleeping 3 seconds...")
-        Thread.sleep(3000)
-        println("Try: " + i)
-        times += time {
-          for buffer <- serBuffer do
-            desJena(new ByteArrayInputStream(buffer), getFormat(args))
-        }
-
-
-  private def serJelly(sourceModels: Seq[Model], closure: RdfStreamFrame => Unit): Unit =
-    val encoder = JenaConverterFactory.encoder(
-      JellyOptionsFromTypesafe.fromTypesafeConfig(conf)
-    )
+  private def serJelly(sourceModels: Seq[Model], opt: RdfStreamOptions, closure: RdfStreamFrame => Unit): Unit =
+    val encoder = JenaConverterFactory.encoder(opt)
     sourceModels
       .map(m => {
-        val rows = m.getGraph.stream().iterator.asScala
+        val rows = m.getGraph.find().asScala
           .flatMap(triple => encoder.addTripleStatement(triple))
           .toSeq
         RdfStreamFrame(rows)
@@ -140,7 +146,7 @@ object RawFlatSerDesBench:
     else JenaConverterFactory.triplesDecoder
     input
       .map(RdfStreamFrame.parseFrom)
-      .map(stream => stream.rows.map(decoder.ingestRow).foreach(_ => {}))
+      .map(frame => frame.rows.map(decoder.ingestRow).foreach(_ => {}))
       .foreach(_ => {})
 
   private def desJena(input: InputStream, format: RDFFormat): Unit =

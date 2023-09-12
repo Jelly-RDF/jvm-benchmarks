@@ -1,16 +1,18 @@
 package eu.ostrzyciel.jelly
 
+import eu.ostrzyciel.jelly.core.JellyOptions
 import org.apache.jena.riot.RDFFormat
 
 import scala.collection.mutable
 import scala.concurrent.duration.*
 
 package object benchmark:
-  val REPEATS = 10
+  val REPEATS = 5
 
   val jenaFormats = Map(
     // Use a non-pretty variant of RDF/XML
-    "rdf-xml" -> (RDFFormat.RDFXML_PLAIN, RDFFormat.RDFXML_PLAIN),
+    // TODO: catch exceptions and re-enable xml
+    // "rdf-xml" -> (RDFFormat.RDFXML_PLAIN, RDFFormat.RDFXML_PLAIN),
     "turtle-pretty" -> (RDFFormat.TURTLE_PRETTY, RDFFormat.TRIG_PRETTY),
     "turtle-blocks" -> (RDFFormat.TURTLE_BLOCKS, RDFFormat.TRIG_BLOCKS),
     "nt" -> (RDFFormat.NTRIPLES, RDFFormat.NQUADS),
@@ -18,8 +20,15 @@ package object benchmark:
     // TODO: add Thrift here?
   )
 
+  val jellyOptions = Map(
+    "jelly-big" -> JellyOptions.bigGeneralized,
+    "jelly-small" -> JellyOptions.smallGeneralized,
+    "jelly-small-noprefix" -> JellyOptions.smallGeneralized.withMaxPrefixTableSize(0),
+    "jelly-small-norepeat" -> JellyOptions.smallGeneralized.withUseRepeat(false),
+  )
+
   object LatencyUtil:
-    // TODO: figure out who to do with this
+    // TODO: figure out what to do with this
     val intervals = Seq(
       10.millis,
       1.milli,

@@ -1,29 +1,28 @@
 package eu.ostrzyciel.jelly.benchmark
 
 import com.typesafe.config.ConfigFactory
-import eu.ostrzyciel.jelly.convert.jena.JenaConverterFactory
-import eu.ostrzyciel.jelly.core.proto.v1.{RdfStreamFrame, RdfStreamOptions, RdfStreamType}
+import eu.ostrzyciel.jelly.core.proto.v1.{RdfStreamOptions, RdfStreamType}
 import org.apache.jena.query.DatasetFactory
 import org.apache.jena.rdf.model.{Model, ModelFactory}
+import org.apache.jena.riot.RDFFormat
 import org.apache.jena.riot.system.AsyncParser
-import org.apache.jena.riot.{RDFFormat, RDFWriter}
 import org.apache.jena.sparql.core.DatasetGraph
 import org.apache.pekko.actor.typed.ActorSystem
 import org.apache.pekko.actor.typed.scaladsl.Behaviors
 
-import java.io.{ByteArrayInputStream, ByteArrayOutputStream, InputStream, OutputStream}
+import java.io.{ByteArrayInputStream, ByteArrayOutputStream, OutputStream}
 import scala.collection.mutable
 import scala.collection.mutable.ArrayBuffer
 import scala.concurrent.ExecutionContext
 import scala.jdk.CollectionConverters.*
 import scala.util.Random
 
-object RawFlatSerDesBench:
+object FlatSerDesBench extends SerDesBench:
   import Util.*
 
   private val conf = ConfigFactory.load()
 
-  implicit val system: ActorSystem[Nothing] = ActorSystem(Behaviors.empty, "RawFlatSerDesBench", conf)
+  implicit val system: ActorSystem[Nothing] = ActorSystem(Behaviors.empty, "FlatSerDesBench", conf)
   implicit val ec: ExecutionContext = system.executionContext
 
   private var useQuads = false
@@ -62,7 +61,7 @@ object RawFlatSerDesBench:
       else RdfStreamType.RDF_STREAM_TYPE_TRIPLES
     )
 
-  private def getSourceFlat(path: String): Seq[Model | DatasetGraph] =
+  private def getSourceFlat(path: String): Either[Seq[Model], Seq[DatasetGraph]] =
     println("Loading the source file...")
     if useQuads then
       val items = AsyncParser.asyncParseQuads(path).asScala
@@ -74,7 +73,7 @@ object RawFlatSerDesBench:
         }).toSeq
       numStatements = items.map(_.size()).sum
       numElements = items.size
-      items
+      Right(items)
     else
       val items = AsyncParser.asyncParseTriples(path).asScala
         .grouped(1000)
@@ -85,7 +84,7 @@ object RawFlatSerDesBench:
       }).toSeq
       numStatements = items.map(_.size()).sum
       numElements = items.size
-      items
+      Left(items)
 
   private def mainSer(path: String): Unit =
     val sourceData = getSourceFlat(path)
@@ -102,8 +101,12 @@ object RawFlatSerDesBench:
         }
       else
         try {
+          val sourceFlat = sourceData match
+            case Left(v) => v
+            case Right(v) => v
+
           times(experiment) += time {
-            for item <- sourceData do
+            for item <- sourceFlat do
               serJena(item, getFormat(experiment), OutputStream.nullOutputStream)
           }
         } catch {
@@ -125,9 +128,12 @@ object RawFlatSerDesBench:
             serBuffer
           else
             val serBuffer = ArrayBuffer[Array[Byte]]()
-            for model <- source do
+            val sourceFlat = source match
+              case Left(v) => v
+              case Right(v) => v
+            for item <- sourceFlat do
               val oStream = new ByteArrayOutputStream()
-              serJena(model, getFormat(experiment), oStream)
+              serJena(item, getFormat(experiment), oStream)
               serBuffer.append(oStream.toByteArray)
             serBuffer
         }
@@ -144,52 +150,8 @@ object RawFlatSerDesBench:
           else
             times(experiment) += time {
               for buffer <- serialized do
-                desJena(new ByteArrayInputStream(buffer), getFormat(experiment))
+                desJena(new ByteArrayInputStream(buffer), getFormat(experiment), useQuads)
             }
       } catch {
         case _: Exception => println(f"Failed experiment with $experiment")
       }
-
-  private def serJelly(
-    sourceData: Seq[Model | DatasetGraph], opt: RdfStreamOptions, closure: RdfStreamFrame => Unit
-  ): Unit =
-    val encoder = JenaConverterFactory.encoder(opt)
-    if !useQuads then
-      sourceData.asInstanceOf[Seq[Model]]
-        .map(m => {
-          val rows = m.getGraph.find().asScala
-            .flatMap(triple => encoder.addTripleStatement(triple))
-            .toSeq
-          RdfStreamFrame(rows)
-        })
-        .foreach(closure)
-    else
-      sourceData.asInstanceOf[Seq[DatasetGraph]]
-        .map(m => {
-          val rows = m.find().asScala
-            .flatMap(quad => encoder.addQuadStatement(quad))
-            .toSeq
-          RdfStreamFrame(rows)
-        })
-        .foreach(closure)
-
-  private def serJena(sourceData: Model | DatasetGraph, format: RDFFormat, outputStream: OutputStream): Unit =
-    val writer = RDFWriter.create().format(format)
-    sourceData match
-      case model: Model => writer.source(model.getGraph)
-      case dataset: DatasetGraph => writer.source(dataset)
-    writer.output(outputStream)
-
-  private def desJelly(input: Iterable[Array[Byte]], quads: Boolean): Unit =
-    val decoder = if quads then JenaConverterFactory.quadsDecoder
-    else JenaConverterFactory.triplesDecoder
-    input
-      .map(RdfStreamFrame.parseFrom)
-      .map(frame => frame.rows.map(decoder.ingestRow).foreach(_ => {}))
-      .foreach(_ => {})
-
-  private def desJena(input: InputStream, format: RDFFormat): Unit =
-    (
-      if !useQuads then AsyncParser.asyncParseTriples(input, format.getLang, "")
-      else AsyncParser.asyncParseQuads(input, format.getLang, "")
-    ).forEachRemaining(_ => {})

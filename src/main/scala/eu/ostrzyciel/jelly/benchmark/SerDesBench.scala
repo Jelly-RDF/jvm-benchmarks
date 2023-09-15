@@ -1,17 +1,34 @@
 package eu.ostrzyciel.jelly.benchmark
 
+import com.typesafe.config.ConfigFactory
 import eu.ostrzyciel.jelly.convert.jena.JenaConverterFactory
 import eu.ostrzyciel.jelly.core.proto.v1.{RdfStreamFrame, RdfStreamOptions}
 import org.apache.jena.rdf.model.Model
-import org.apache.jena.riot.system.AsyncParser
 import org.apache.jena.riot.{RDFFormat, RDFWriter}
+import org.apache.jena.riot.system.AsyncParser
 import org.apache.jena.sparql.core.DatasetGraph
+import org.apache.pekko.actor.typed.ActorSystem
+import org.apache.pekko.actor.typed.scaladsl.Behaviors
 
 import java.io.{InputStream, OutputStream}
+import scala.collection.mutable
+import scala.collection.mutable.ArrayBuffer
+import scala.concurrent.ExecutionContext
 import scala.jdk.CollectionConverters.*
+import scala.util.Random
 
 trait SerDesBench:
   protected final type StreamSeq = Either[Iterable[Model], Iterable[DatasetGraph]]
+
+  protected val conf = ConfigFactory.load()
+
+  implicit protected val system: ActorSystem[Nothing] = ActorSystem(Behaviors.empty, "SerDesBench", conf)
+  implicit protected val ec: ExecutionContext = system.executionContext
+
+  protected val experiments = Random.shuffle(jenaFormats.keys ++ jellyOptions.keys)
+  protected val times: Map[String, mutable.ArrayBuffer[Long]] = experiments.map(_ -> mutable.ArrayBuffer[Long]()).toMap
+  protected var numStatements: Long = 0
+  protected var numElements: Long = 0
 
   protected final def serJelly(
     sourceData: StreamSeq, opt: RdfStreamOptions, closure: RdfStreamFrame => Unit

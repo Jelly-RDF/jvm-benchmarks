@@ -1,35 +1,21 @@
 package eu.ostrzyciel.jelly.benchmark
 
-import com.typesafe.config.ConfigFactory
 import eu.ostrzyciel.jelly.core.proto.v1.{RdfStreamOptions, RdfStreamType}
 import org.apache.jena.query.DatasetFactory
 import org.apache.jena.rdf.model.{Model, ModelFactory}
 import org.apache.jena.riot.RDFFormat
 import org.apache.jena.riot.system.AsyncParser
 import org.apache.jena.sparql.core.DatasetGraph
-import org.apache.pekko.actor.typed.ActorSystem
-import org.apache.pekko.actor.typed.scaladsl.Behaviors
 
 import java.io.{ByteArrayInputStream, ByteArrayOutputStream, OutputStream}
 import scala.collection.mutable
 import scala.collection.mutable.ArrayBuffer
-import scala.concurrent.ExecutionContext
 import scala.jdk.CollectionConverters.*
-import scala.util.Random
 
 object FlatSerDesBench extends SerDesBench:
   import Util.*
-
-  private val conf = ConfigFactory.load()
-
-  implicit val system: ActorSystem[Nothing] = ActorSystem(Behaviors.empty, "FlatSerDesBench", conf)
-  implicit val ec: ExecutionContext = system.executionContext
-
+  
   private var useQuads = false
-  private val experiments = Random.shuffle(jenaFormats.keys ++ jellyOptions.keys)
-  private val times: Map[String, mutable.ArrayBuffer[Long]] = experiments.map(_ -> mutable.ArrayBuffer[Long]()).toMap
-  private var numStatements: Long = 0
-  private var numElements: Long = 0
 
   // Arguments: [ser/des] [source file path]
   def main(args: Array[String]): Unit =

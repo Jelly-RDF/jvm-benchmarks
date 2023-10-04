@@ -1,30 +1,36 @@
 package eu.ostrzyciel.jelly.benchmark
 
 import eu.ostrzyciel.jelly.core.proto.v1.{RdfStreamOptions, RdfStreamType}
+import eu.ostrzyciel.jelly.stream.{DecoderFlow, JellyIo}
 import org.apache.jena.query.DatasetFactory
 import org.apache.jena.rdf.model.{Model, ModelFactory}
 import org.apache.jena.riot.RDFFormat
-import org.apache.jena.riot.system.AsyncParser
 import org.apache.jena.sparql.core.DatasetGraph
+import org.apache.pekko.stream.scaladsl.Sink
 
-import java.io.{ByteArrayInputStream, ByteArrayOutputStream, OutputStream}
+import java.io.{ByteArrayInputStream, ByteArrayOutputStream, FileInputStream, OutputStream}
+import java.util.zip.GZIPInputStream
 import scala.collection.mutable
 import scala.collection.mutable.ArrayBuffer
-import scala.jdk.CollectionConverters.*
+import scala.concurrent.Await
+import scala.concurrent.duration.*
 
 object FlatSerDesBench extends SerDesBench:
   import Util.*
+  import eu.ostrzyciel.jelly.convert.jena.*
   
   private var useQuads = false
+  private var elementSize = 0
 
-  // Arguments: [ser/des] [source file path]
+  // Arguments: [ser/des] [element size] [triples/quads] [source file path]
   def main(args: Array[String]): Unit =
-    if args(1).contains(".nq") then useQuads = true
+    if args(2) == "quads" then useQuads = true
+    elementSize = args(1).toInt
 
     if args(0) == "ser" then
-      mainSer(args(1))
+      mainSer(args(3))
     else if args(0) == "des" then
-      mainDes(args(1))
+      mainDes(args(3))
 
     printSpeed(numStatements, times)
     saveRunInfo(s"flat_raw_${args(0)}", conf, Map(
@@ -32,8 +38,10 @@ object FlatSerDesBench extends SerDesBench:
       "statements" -> numStatements,
       "order" -> experiments,
       "times" -> times,
-      "file" -> args(1),
+      "file" -> args(3),
       "task" -> args(0),
+      "streamType" -> args(2),
+      "elementSize" -> args(1),
     ))
     sys.exit()
 
@@ -49,25 +57,34 @@ object FlatSerDesBench extends SerDesBench:
 
   private def getSourceFlat(path: String): Either[Seq[Model], Seq[DatasetGraph]] =
     println("Loading the source file...")
+    val is = GZIPInputStream(FileInputStream(path))
     if useQuads then
-      val items = AsyncParser.asyncParseQuads(path).asScala
-        .grouped(1000)
+      val readFuture = JellyIo.fromIoStream(is)
+        .via(DecoderFlow.quadsToFlat)
+        .grouped(elementSize)
         .map(ts => {
           val dataset = DatasetFactory.create().asDatasetGraph()
           ts.foreach(dataset.add)
           dataset
-        }).toSeq
+        })
+        .runWith(Sink.seq)
+
+      val items = Await.result(readFuture, 3.hours)
       numStatements = items.map(_.size()).sum
       numElements = items.size
       Right(items)
     else
-      val items = AsyncParser.asyncParseTriples(path).asScala
-        .grouped(1000)
+      val readFuture = JellyIo.fromIoStream(is)
+        .via(DecoderFlow.triplesToFlat)
+        .grouped(elementSize)
         .map(ts => {
           val model = ModelFactory.createDefaultModel()
           ts.foreach(model.getGraph.add)
           model
-      }).toSeq
+        })
+        .runWith(Sink.seq)
+
+      val items = Await.result(readFuture, 3.hours)
       numStatements = items.map(_.size()).sum
       numElements = items.size
       Left(items)
@@ -98,7 +115,7 @@ object FlatSerDesBench extends SerDesBench:
         } catch {
           case e: Exception =>
             println(f"Failed to serialize with $experiment")
-            println(e)
+            e.printStackTrace()
         }
 
   private def mainDes(path: String): Unit =
@@ -139,5 +156,7 @@ object FlatSerDesBench extends SerDesBench:
                 desJena(new ByteArrayInputStream(buffer), getFormat(experiment), useQuads)
             }
       } catch {
-        case _: Exception => println(f"Failed experiment with $experiment")
+        case e: Exception =>
+          println(f"Failed experiment with $experiment")
+          e.printStackTrace()
       }

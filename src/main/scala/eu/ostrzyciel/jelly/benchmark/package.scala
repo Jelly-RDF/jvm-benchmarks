@@ -2,12 +2,13 @@ package eu.ostrzyciel.jelly
 
 import eu.ostrzyciel.jelly.core.JellyOptions
 import org.apache.jena.riot.RDFFormat
+import org.apache.jena.sys.JenaSystem
 
 import scala.collection.mutable
 import scala.concurrent.duration.*
 
 package object benchmark:
-  val REPEATS = 2
+  val REPEATS = 15
 
   val jenaFormats = Map(
     // Use a non-pretty variant of RDF/XML
@@ -17,6 +18,7 @@ package object benchmark:
     "jena-turtle-blocks" -> (RDFFormat.TURTLE_BLOCKS, RDFFormat.TRIG_BLOCKS),
     "jena-nt" -> (RDFFormat.NTRIPLES, RDFFormat.NQUADS),
     "jena-protobuf" -> (RDFFormat.RDF_PROTO, RDFFormat.RDF_PROTO),
+    "jena-thrift" -> (RDFFormat.RDF_THRIFT, RDFFormat.RDF_THRIFT),
     // The TriX implementation in Jena is kinda buggy, it breaks on some encoding issues
     // "jena-trix" -> (RDFFormat.TRIX, RDFFormat.TRIX),
   )
@@ -26,6 +28,9 @@ package object benchmark:
     "jelly-small" -> JellyOptions.smallGeneralized,
     "jelly-small-noprefix" -> JellyOptions.smallGeneralized.withMaxPrefixTableSize(0),
     "jelly-small-norepeat" -> JellyOptions.smallGeneralized.withUseRepeat(false),
+    "jelly-small-noprefix-norepeat" -> JellyOptions.smallGeneralized
+      .withMaxPrefixTableSize(0)
+      .withUseRepeat(false),
   )
 
   object LatencyUtil:

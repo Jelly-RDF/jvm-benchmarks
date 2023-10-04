@@ -23,7 +23,7 @@ object Util:
     println("Statements: " + size)
     for exp -> results <- times do
       println("Experiment: " + exp)
-      val avgTime = (results.sum / results.size) / 1_000_000d
+      val avgTime = (results.sum / results.size.toDouble) / 1_000_000d
       println("Average time (ms): " + avgTime)
       println("Average " + size / avgTime + " kTriples/s")
       println("Times (ns): " + results)

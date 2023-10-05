@@ -70,7 +70,7 @@ object FlatSerDesBench extends SerDesBench:
         .runWith(Sink.seq)
 
       val items = Await.result(readFuture, 3.hours)
-      numStatements = items.map(_.size()).sum
+      numStatements = items.map(_.asQuads.size).sum
       numElements = items.size
       Right(items)
     else
@@ -148,7 +148,7 @@ object FlatSerDesBench extends SerDesBench:
           println(f"Try: $i, experiment: $experiment")
           if experiment.startsWith("jelly") then
             times(experiment) += time {
-              desJelly(serialized, useQuads)
+              desJelly(serialized, if useQuads then "quads" else "triples")
             }
           else
             times(experiment) += time {

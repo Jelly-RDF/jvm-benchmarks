@@ -18,6 +18,8 @@ import scala.jdk.CollectionConverters.*
 import scala.util.Random
 
 trait SerDesBench:
+  import eu.ostrzyciel.jelly.convert.jena.*
+
   protected final type StreamSeq = Either[Iterable[Model], Iterable[DatasetGraph]]
 
   protected val conf = ConfigFactory.load()
@@ -38,7 +40,7 @@ trait SerDesBench:
       case Left(models) =>
         // TRIPLES
         models.map(m => {
-            val rows = m.getGraph.find().asScala
+            val rows = m.asTriples
               .flatMap(triple => encoder.addTripleStatement(triple))
               .toSeq
             RdfStreamFrame(rows)
@@ -49,24 +51,19 @@ trait SerDesBench:
           // GRAPHS
           // Note: this implementation does not carry the graphs over frame boundaries.
           datasets.map(ds => {
-            val default = ds.getDefaultGraph
-            val graphs = if !default.isEmpty then
-              (null, default) :: ds.listGraphNodes().asScala.map(g => (g, ds.getGraph(g))).toList
-            else ds.listGraphNodes().asScala.map(g => (g, ds.getGraph(g))).toList
-
-            val rows = graphs.flatMap(params => {
-              val (g, graph) = params
+            val rows = ds.asGraphs.flatMap(params => {
+              val (g, triples) = params
               encoder.startGraph(g) ++
-                graph.find().asScala.flatMap(triple => encoder.addTripleStatement(triple)) ++
+                triples.flatMap(triple => encoder.addTripleStatement(triple)) ++
                 encoder.endGraph()
-            })
+            }).toSeq
             RdfStreamFrame(rows)
           })
           .foreach(closure)
         else
           // QUADS
-          datasets.map(m => {
-              val rows = m.find().asScala
+          datasets.map(ds => {
+              val rows = ds.asQuads
                 .flatMap(quad => encoder.addQuadStatement(quad))
                 .toSeq
               RdfStreamFrame(rows)
@@ -79,9 +76,11 @@ trait SerDesBench:
       case dataset: DatasetGraph => writer.source(dataset)
     writer.output(outputStream)
 
-  protected final def desJelly(input: Iterable[Array[Byte]], quads: Boolean): Unit =
-    val decoder = if quads then JenaConverterFactory.quadsDecoder
-    else JenaConverterFactory.triplesDecoder
+  protected final def desJelly(input: Iterable[Array[Byte]], streamType: String): Unit =
+    val decoder = streamType match
+      case "triples" => JenaConverterFactory.triplesDecoder
+      case "quads" => JenaConverterFactory.quadsDecoder
+      case "graphs" => JenaConverterFactory.graphsDecoder
     input
       .map(RdfStreamFrame.parseFrom)
       .map(frame => frame.rows.map(decoder.ingestRow).foreach(_ => {}))

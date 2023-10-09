@@ -1,6 +1,5 @@
 package eu.ostrzyciel.jelly.benchmark
 
-import eu.ostrzyciel.jelly.benchmark.FlatSerDesBench.{numElements, numStatements}
 import eu.ostrzyciel.jelly.core.proto.v1.{RdfStreamOptions, RdfStreamType}
 import eu.ostrzyciel.jelly.stream.{DecoderFlow, JellyIo}
 import org.apache.jena.query.DatasetFactory

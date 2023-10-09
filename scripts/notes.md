@@ -1,3 +1,4 @@
 - `./flat_ser_des.sh ~/work/graalvm21/bin/java /home/piotr/risercz/jvm-benchmarks/target/scala-3.3.0/benchmarks-assembly-0.1.0-SNAPSHOT.jar /home/piotr/work/rb/jelly_100k/ 4096`
 - `./flat_ser_des.sh ~/work/graalvm21/bin/java /home/piotr/risercz/jvm-benchmarks/target/scala-3.3.0/benchmarks-assembly-0.1.0-SNAPSHOT.jar /home/piotr/work/rb/jelly_100k/ 1024`
 - `./stream_ser_des.sh ~/work/graalvm21/bin/java /home/piotr/risercz/jvm-benchmarks/target/scala-3.3.0/benchmarks-assembly-0.1.0-SNAPSHOT.jar /home/piotr/work/rb/jelly_100k/`
+- `./size.sh ~/work/graalvm21/bin/java /home/piotr/risercz/jvm-benchmarks/target/scala-3.3.0/benchmarks-assembly-0.1.0-SNAPSHOT.jar /home/piotr/work/rb/jelly_100k/`

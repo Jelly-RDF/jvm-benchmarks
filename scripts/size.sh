@@ -3,12 +3,11 @@
 set -eux
 
 JAVA_EXEC=$1
-CP="$2 eu.ostrzyciel.jelly.benchmark.StreamSerDesBench"
+CP="$2 eu.ostrzyciel.jelly.benchmark.SizeBench"
 BASE_DATA=$3
 
 JAVA_OPTS="-Xms1G -Xmx32G"
 
-TASKS="ser des"
 DATASETS=(
   "triples assist-iot-weather"
   "quads assist-iot-weather-graphs"
@@ -26,13 +25,15 @@ DATASETS=(
   "triples politiquices"
   "triples yago-annotated-facts"
 )
+ELEMENTS="0 1024 4096"
 
 for dataset in "${DATASETS[@]}"
 do
-  for task in $TASKS
+  for el in $ELEMENTS
   do
     IFS=" " read -r -a ds <<< "$dataset"
-    echo "Running $task for ${ds[0]} ${ds[1]}"
-    $JAVA_EXEC $JAVA_OPTS -Djelly.debug.output-dir=./result/stream_ser_des/ -cp $CP "$task" "${ds[0]}" "$BASE_DATA/${ds[1]}.jelly.gz"
+    echo "Running element size $el for ${ds[0]} ${ds[1]}"
+    $JAVA_EXEC $JAVA_OPTS -Djelly.debug.output-dir=./result/size/ -cp $CP "${ds[0]}" "$el" "$BASE_DATA/${ds[1]}.jelly.gz"
   done
 done
+

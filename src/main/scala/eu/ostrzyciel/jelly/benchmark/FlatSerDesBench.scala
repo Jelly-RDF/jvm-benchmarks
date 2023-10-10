@@ -51,8 +51,8 @@ object FlatSerDesBench extends SerDesBench:
 
   private def getJellyOpts(exp: String): RdfStreamOptions =
     jellyOptions(exp).withStreamType(
-      if useQuads then RdfStreamType.RDF_STREAM_TYPE_QUADS
-      else RdfStreamType.RDF_STREAM_TYPE_TRIPLES
+      if useQuads then RdfStreamType.QUADS
+      else RdfStreamType.TRIPLES
     )
 
   private def getSourceFlat(path: String): Either[Seq[Model], Seq[DatasetGraph]] =

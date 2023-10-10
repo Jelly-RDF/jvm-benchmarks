@@ -47,7 +47,7 @@ trait SerDesBench:
           })
           .foreach(closure)
       case Right(datasets) =>
-        if opt.streamType.isRdfStreamTypeGraphs then
+        if opt.streamType.isGraphs then
           // GRAPHS
           // Note: this implementation does not carry the graphs over frame boundaries.
           datasets.map(ds => {

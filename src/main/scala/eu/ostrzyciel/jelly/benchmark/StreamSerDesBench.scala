@@ -51,9 +51,9 @@ object StreamSerDesBench extends SerDesBench:
   private def getJellyOpts(exp: String, streamType: String): RdfStreamOptions =
     jellyOptions(exp).withStreamType(
       streamType match
-        case "triples" => RdfStreamType.RDF_STREAM_TYPE_TRIPLES
-        case "graphs" => RdfStreamType.RDF_STREAM_TYPE_GRAPHS
-        case "quads" => RdfStreamType.RDF_STREAM_TYPE_QUADS
+        case "triples" => RdfStreamType.TRIPLES
+        case "graphs" => RdfStreamType.GRAPHS
+        case "quads" => RdfStreamType.QUADS
     )
 
   private def getSourceData(path: String, streamType: String): Either[Seq[Model], Seq[DatasetGraph]] =

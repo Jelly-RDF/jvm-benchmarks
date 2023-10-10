@@ -2,7 +2,6 @@ package eu.ostrzyciel.jelly
 
 import eu.ostrzyciel.jelly.core.JellyOptions
 import org.apache.jena.riot.RDFFormat
-import org.apache.jena.sys.JenaSystem
 
 import scala.collection.mutable
 import scala.concurrent.duration.*

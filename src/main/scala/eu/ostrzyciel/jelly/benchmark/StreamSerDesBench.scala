@@ -1,10 +1,8 @@
 package eu.ostrzyciel.jelly.benchmark
 
-import eu.ostrzyciel.jelly.core.proto.v1.{RdfStreamOptions, RdfStreamType}
 import eu.ostrzyciel.jelly.stream.{DecoderFlow, JellyIo}
 import org.apache.jena.query.DatasetFactory
 import org.apache.jena.rdf.model.{Model, ModelFactory}
-import org.apache.jena.riot.RDFFormat
 import org.apache.jena.sparql.core.DatasetGraph
 import org.apache.pekko.stream.scaladsl.Sink
 
@@ -16,6 +14,7 @@ import scala.concurrent.duration.*
 import scala.util.Random
 
 object StreamSerDesBench extends SerDesBench:
+  import Experiments.*
   import Util.*
   import eu.ostrzyciel.jelly.convert.jena.*
 
@@ -43,18 +42,6 @@ object StreamSerDesBench extends SerDesBench:
       "streamType" -> streamType,
     ))
     sys.exit()
-
-  private def getFormat(exp: String, streamType: String): RDFFormat =
-    val tuple = jenaFormats(exp)
-    if streamType == "triples" then tuple(0) else tuple(1)
-
-  private def getJellyOpts(exp: String, streamType: String): RdfStreamOptions =
-    jellyOptions(exp).withStreamType(
-      streamType match
-        case "triples" => RdfStreamType.TRIPLES
-        case "graphs" => RdfStreamType.GRAPHS
-        case "quads" => RdfStreamType.QUADS
-    )
 
   private def getSourceData(path: String, streamType: String): Either[Seq[Model], Seq[DatasetGraph]] =
     println("Loading the source file...")

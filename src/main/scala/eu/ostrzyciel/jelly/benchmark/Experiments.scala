@@ -5,7 +5,7 @@ import eu.ostrzyciel.jelly.core.proto.v1.{RdfStreamOptions, RdfStreamType}
 import org.apache.jena.riot.RDFFormat
 
 object Experiments:
-  val REPEATS = 15
+  val REPEATS = 1
 
   val jenaFormats = Map(
     // Use a non-pretty variant of RDF/XML

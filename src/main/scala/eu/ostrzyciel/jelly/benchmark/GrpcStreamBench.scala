@@ -89,6 +89,7 @@ object GrpcStreamBench:
       "useGzip" -> gzip,
       "file" -> file,
       "streamType" -> streamType,
+      "port" -> config.getInt("pekko.grpc.client.jelly-rdf-client.port"),
     ))
     sys.exit()
 

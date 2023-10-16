@@ -25,9 +25,9 @@ object GrpcStreamBench:
   implicit private val system: ActorSystem[Nothing] = ActorSystem(Behaviors.empty, "StreamServer", config)
   implicit private val ec: ExecutionContext = system.executionContext
 
-  private val t0client: Map[String, ArrayBuffer[Long]] = jellyOptions.keys.map(_ -> ArrayBuffer[Long]()).toMap
-  private val t0server: Map[String, ArrayBuffer[Long]] = jellyOptions.keys.map(_ -> ArrayBuffer[Long]()).toMap
-  private val t1client: Map[String, ArrayBuffer[Long]] = jellyOptions.keys.map(_ -> ArrayBuffer[Long]()).toMap
+  private val t0client: Map[String, ArrayBuffer[Long]] = jellyOptionsSmall.keys.map(_ -> ArrayBuffer[Long]()).toMap
+  private val t0server: Map[String, ArrayBuffer[Long]] = jellyOptionsSmall.keys.map(_ -> ArrayBuffer[Long]()).toMap
+  private val t1client: Map[String, ArrayBuffer[Long]] = jellyOptionsSmall.keys.map(_ -> ArrayBuffer[Long]()).toMap
 
   case class StreamResult(t0client: Long, t0server: Long, t1client: Long):
     def time = t1client - t0server
@@ -67,14 +67,14 @@ object GrpcStreamBench:
 
     val client = RdfStreamServiceClient(settings)
 
-    for i <- 1 to REPEATS; expName <- jellyOptions.keys do
+    for i <- 1 to NETWORK_REPEATS; expName <- jellyOptionsSmall.keys do
       println(s"Experiment $expName try: $i")
       Await.result(
         request(client, getJellyOpts(expName, streamType), expName),
         Duration.Inf
       )
 
-    val times = jellyOptions.keys.map(expName =>
+    val times = jellyOptionsSmall.keys.map(expName =>
       expName -> t0client(expName).lazyZip(t0server(expName)).lazyZip(t1client(expName))
         .map((t0c, t0s, t1c) => StreamResult(t0c, t0s, t1c))
         .toSeq
@@ -85,7 +85,7 @@ object GrpcStreamBench:
       "times" -> times,
       "elements" -> numElements,
       "statements" -> numStatements,
-      "order" -> jellyOptions.keys.toSeq,
+      "order" -> jellyOptionsSmall.keys.toSeq,
       "useGzip" -> gzip,
       "file" -> file,
       "streamType" -> streamType,

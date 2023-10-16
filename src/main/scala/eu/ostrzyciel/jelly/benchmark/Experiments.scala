@@ -5,7 +5,10 @@ import eu.ostrzyciel.jelly.core.proto.v1.{RdfStreamOptions, RdfStreamType}
 import org.apache.jena.riot.RDFFormat
 
 object Experiments:
-  val REPEATS = 1
+  // Number of repeats for experiments that are CPU-bound
+  val REPEATS = 15
+  // Number of repeats for experiments that are network-bound
+  val NETWORK_REPEATS = 8
 
   val jenaFormats = Map(
     // Use a non-pretty variant of RDF/XML
@@ -29,6 +32,8 @@ object Experiments:
       .withMaxPrefixTableSize(0)
       .withUseRepeat(false),
   )
+
+  val jellyOptionsSmall = jellyOptions.filterNot(_._1.contains("norepeat"))
 
   def getFormat(exp: String, streamType: String): RDFFormat =
     val tuple = jenaFormats(exp)

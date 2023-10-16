@@ -13,13 +13,15 @@ class RdfStreamServiceFromData(data: Either[Seq[Model], Seq[DatasetGraph]])
   extends RdfStreamService:
 
   import eu.ostrzyciel.jelly.convert.jena.*
+  
+  protected def source[T](s: Seq[T]): Source[T, NotUsed] = Source(s)
 
   override def subscribeRdf(in: RdfStreamSubscribe): Source[RdfStreamFrame, NotUsed] =
     val options = in.requestedOptions.get
 
     data match
       case Left(models) =>
-        Source(models)
+        source(models)
           .map(_.asTriples)
           // Don't do this in production... simply use the options requested by the client.
           // Throw exception if the client didn't send their options.
@@ -27,11 +29,11 @@ class RdfStreamServiceFromData(data: Either[Seq[Model], Seq[DatasetGraph]])
       case Right(datasets) =>
         options.streamType match
           case RdfStreamType.QUADS =>
-            Source(datasets)
+            source(datasets)
               .map(_.asQuads)
               .via(EncoderFlow.fromGroupedQuads(None, options))
           case RdfStreamType.GRAPHS =>
-            Source(datasets)
+            source(datasets)
               .map(_.asGraphs)
               .via(EncoderFlow.fromGroupedGraphs(None, options))
           case _ => throw new IllegalArgumentException("Only QUADS and GRAPHS are supported")

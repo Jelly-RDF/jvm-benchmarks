@@ -5,6 +5,9 @@
 - `./grpc_stream.sh ~/work/graalvm21/bin/java ../target/scala-3.3.0/benchmarks-assembly-0.1.0-SNAPSHOT.jar ~/work/rb/jelly_100k/ 8420`
 - `./grpc_stream.sh ~/work/graalvm21/bin/java ../target/scala-3.3.0/benchmarks-assembly-0.1.0-SNAPSHOT.jar ~/work/rb/jelly_100k/ 8421`
 - `./grpc_stream.sh ~/work/graalvm21/bin/java ../target/scala-3.3.0/benchmarks-assembly-0.1.0-SNAPSHOT.jar ~/work/rb/jelly_100k/ 8422`
+- `./grpc_latency.sh ~/work/graalvm21/bin/java ../target/scala-3.3.0/benchmarks-assembly-0.1.0-SNAPSHOT.jar ~/work/rb/jelly_10k/ 8420`
+- `./grpc_latency.sh ~/work/graalvm21/bin/java ../target/scala-3.3.0/benchmarks-assembly-0.1.0-SNAPSHOT.jar ~/work/rb/jelly_10k/ 8421`
+- `./grpc_latency.sh ~/work/graalvm21/bin/java ../target/scala-3.3.0/benchmarks-assembly-0.1.0-SNAPSHOT.jar ~/work/rb/jelly_10k/ 8422`
 
 ## Network emulation (end-to-end tests)
 

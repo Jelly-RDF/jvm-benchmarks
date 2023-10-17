@@ -35,7 +35,7 @@ do
     IFS=" " read -r -a ds <<< "$dataset"
     echo "Running element size gzip $gzip_opt for ${ds[0]} ${ds[1]}"
     $JAVA_EXEC $JAVA_OPTS \
-      -Djelly.debug.output-dir=./result/grpc_stream/ \
+      -Djelly.debug.output-dir=./result/grpc_latency/ \
       -Dpekko.grpc.client.jelly-rdf-client.port=$PORT \
       -cp $CP "$gzip_opt" "${ds[0]}" "$BASE_DATA/${ds[1]}.jelly.gz"
   done

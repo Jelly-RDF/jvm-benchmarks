@@ -115,13 +115,13 @@ object GrpcStreamBench:
             .runWith(countSink)
         case RdfStreamType.GRAPHS =>
           responseStream
-            .via(DecoderFlow.graphsToFlat)
-            .map(_._2)
+            .via(DecoderFlow.graphsToGrouped)
             .runWith(countSink)
         case _ => throw new RuntimeException("Unknown stream type")
     } map { (statements, elements) =>
       t1client(expName).append(System.nanoTime())
-      println(s"Streaming done, elements: $elements statements: $statements")
+      val thing = if opt.streamType.isGraphs then "graphs" else "statements"
+      println(s"Streaming done, elements: $elements $thing: $statements")
     }
 
   private def countSink[T]: Sink[IterableOnce[T], Future[(Long, Long)]] =

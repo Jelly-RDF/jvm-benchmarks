@@ -111,8 +111,7 @@ object GrpcLatencyBench:
             .via(DecoderFlow.quadsToGrouped)
         case RdfStreamType.GRAPHS =>
           responseStream
-            .via(DecoderFlow.graphsToFlat)
-            .map(_._2)
+            .via(DecoderFlow.graphsToGrouped)
         case _ => throw new Error("Unknown stream type")
 
         s.map(_.iterator.size)
@@ -125,6 +124,6 @@ object GrpcLatencyBench:
     Await.result(server.terminate(), Duration.Inf)
 
     if tsServer.size != tsClient.size then
-      throw new Error("Message count mismatch")
+      throw new Error(f"Message count mismatch. ${tsServer.size} server, ${tsClient.size} client")
 
     tsServer.zip(tsClient).toSeq

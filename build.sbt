@@ -3,7 +3,7 @@ ThisBuild / scalaVersion := "3.3.0"
 resolvers +=
   "Sonatype OSS Snapshots" at "https://s01.oss.sonatype.org/content/repositories/snapshots"
 
-val jellyV = "0.5.1+2-8afe462e-SNAPSHOT"
+val jellyV = "0.5.2+1-980697df-SNAPSHOT"
 
 lazy val root = (project in file("."))
   .settings(

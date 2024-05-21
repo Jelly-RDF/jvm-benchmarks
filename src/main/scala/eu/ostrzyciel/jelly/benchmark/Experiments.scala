@@ -1,7 +1,7 @@
 package eu.ostrzyciel.jelly.benchmark
 
 import eu.ostrzyciel.jelly.core.JellyOptions
-import eu.ostrzyciel.jelly.core.proto.v1.{RdfStreamOptions, RdfStreamType}
+import eu.ostrzyciel.jelly.core.proto.v1.*
 import org.apache.jena.riot.RDFFormat
 
 object Experiments:
@@ -39,10 +39,18 @@ object Experiments:
     val tuple = jenaFormats(exp)
     if streamType == "triples" then tuple(0) else tuple(1)
 
-  def getJellyOpts(exp: String, streamType: String): RdfStreamOptions =
-    jellyOptions(exp).withStreamType(
-      streamType match
-        case "triples" => RdfStreamType.TRIPLES
-        case "graphs" => RdfStreamType.GRAPHS
-        case "quads" => RdfStreamType.QUADS
-    )
+  def getJellyOpts(exp: String, streamType: String, grouped: Boolean): RdfStreamOptions =
+    val (physType, logicType) = streamType match
+      case "triples" => (
+        PhysicalStreamType.TRIPLES, 
+        if grouped then LogicalStreamType.GRAPHS else LogicalStreamType.FLAT_TRIPLES
+      )
+      case "graphs" => (
+        PhysicalStreamType.GRAPHS,
+        if grouped then LogicalStreamType.DATASETS else LogicalStreamType.FLAT_QUADS
+      )
+      case "quads" => (
+        PhysicalStreamType.QUADS,
+        if grouped then LogicalStreamType.DATASETS else LogicalStreamType.FLAT_QUADS
+      )
+    jellyOptions(exp).copy(physicalType = physType, logicalType = logicType)

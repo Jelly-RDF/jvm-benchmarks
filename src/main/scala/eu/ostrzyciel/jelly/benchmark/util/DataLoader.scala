@@ -15,7 +15,7 @@ import scala.concurrent.duration.*
 
 object DataLoader:
   import Util.*
-  import eu.ostrzyciel.jelly.convert.jena.*
+  import eu.ostrzyciel.jelly.convert.jena.given
 
   /**
    * @param path path to the source file
@@ -29,7 +29,7 @@ object DataLoader:
     val is = GZIPInputStream(FileInputStream(path))
     if streamType == "triples" then
       val s = JellyIo.fromIoStream(is)
-        .via(DecoderFlow.triplesToGrouped)
+        .via(DecoderFlow.decodeTriples.asGraphStream())
 
       val readFuture = (if elementSize == 0 then s else s.mapConcat(identity).grouped(elementSize))
         .map(ts => {
@@ -43,7 +43,7 @@ object DataLoader:
       (items.map(_.size()).sum, items.size, Left(items))
     else
       val s = JellyIo.fromIoStream(is)
-        .via(DecoderFlow.quadsToGrouped)
+        .via(DecoderFlow.decodeQuads.asDatasetStreamOfQuads())
 
       val readFuture = (if elementSize == 0 then s else s.mapConcat(identity).grouped(elementSize))
         .map(qs => {

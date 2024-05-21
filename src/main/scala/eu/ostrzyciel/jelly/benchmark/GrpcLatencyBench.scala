@@ -20,7 +20,7 @@ import scala.concurrent.duration.*
 object GrpcLatencyBench:
   import Experiments.*
   import Util.*
-  import eu.ostrzyciel.jelly.convert.jena.*
+  import eu.ostrzyciel.jelly.convert.jena.given
 
   val config = ConfigFactory.parseString("akka.http.server.preview.enable-http2 = on")
     .withFallback(ConfigFactory.load())
@@ -63,7 +63,7 @@ object GrpcLatencyBench:
     for exp <- jellyOptionsSmall.keys do
       println(s"Running experiment $exp")
       LatencyUtil.run(
-        (i, el) => runOne(data, i, el, gzip, getJellyOpts(exp, streamType)),
+        (i, el) => runOne(data, i, el, gzip, getJellyOpts(exp, streamType, true)),
         resultMap(exp)
       )
     saveRunInfo("grpc_latency", config, Map(
@@ -102,16 +102,16 @@ object GrpcLatencyBench:
       val client = RdfStreamServiceClient(settings)
 
       val responseStream = client.subscribeRdf(RdfStreamSubscribe("dummy topic", Some(opt)))
-      val s: Source[IterableOnce[Any], NotUsed] = opt.streamType match
-        case RdfStreamType.TRIPLES =>
+      val s: Source[IterableOnce[Any], NotUsed] = opt.physicalType match
+        case PhysicalStreamType.TRIPLES =>
           responseStream
-            .via(DecoderFlow.triplesToGrouped)
-        case RdfStreamType.QUADS =>
+            .via(DecoderFlow.decodeTriples.asGraphStream())
+        case PhysicalStreamType.QUADS =>
           responseStream
-            .via(DecoderFlow.quadsToGrouped)
-        case RdfStreamType.GRAPHS =>
+            .via(DecoderFlow.decodeQuads.asDatasetStreamOfQuads())
+        case PhysicalStreamType.GRAPHS =>
           responseStream
-            .via(DecoderFlow.graphsToGrouped)
+            .via(DecoderFlow.decodeGraphs.asDatasetStream())
         case _ => throw new Error("Unknown stream type")
 
         s.map(_.iterator.size)

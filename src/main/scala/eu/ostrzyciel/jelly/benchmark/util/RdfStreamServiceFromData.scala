@@ -12,7 +12,7 @@ import scala.concurrent.Future
 class RdfStreamServiceFromData(data: Either[Seq[Model], Seq[DatasetGraph]])
   extends RdfStreamService:
 
-  import eu.ostrzyciel.jelly.convert.jena.*
+  import eu.ostrzyciel.jelly.convert.jena.given
   
   protected def source[T](s: Seq[T]): Source[T, NotUsed] = Source(s)
 
@@ -25,17 +25,17 @@ class RdfStreamServiceFromData(data: Either[Seq[Model], Seq[DatasetGraph]])
           .map(_.asTriples)
           // Don't do this in production... simply use the options requested by the client.
           // Throw exception if the client didn't send their options.
-          .via(EncoderFlow.fromGroupedTriples(None, options))
+          .via(EncoderFlow.graphStream(None, options))
       case Right(datasets) =>
-        options.streamType match
-          case RdfStreamType.QUADS =>
+        options.physicalType match
+          case PhysicalStreamType.QUADS =>
             source(datasets)
               .map(_.asQuads)
-              .via(EncoderFlow.fromGroupedQuads(None, options))
-          case RdfStreamType.GRAPHS =>
+              .via(EncoderFlow.datasetStreamFromQuads(None, options))
+          case PhysicalStreamType.GRAPHS =>
             source(datasets)
               .map(_.asGraphs)
-              .via(EncoderFlow.fromGroupedGraphs(None, options))
+              .via(EncoderFlow.datasetStream(None, options))
           case _ => throw new IllegalArgumentException("Only QUADS and GRAPHS are supported")
 
   override def publishRdf(in: Source[RdfStreamFrame, NotUsed]): Future[RdfStreamReceived] =

@@ -3,7 +3,7 @@ ThisBuild / scalaVersion := "3.3.0"
 resolvers +=
   "Sonatype OSS Snapshots" at "https://s01.oss.sonatype.org/content/repositories/snapshots"
 
-val jellyV = "0.5.2+1-980697df-SNAPSHOT"
+val jellyV = "0.6.0+8-7e86fe1b-SNAPSHOT"
 
 lazy val root = (project in file("."))
   .settings(
@@ -13,7 +13,7 @@ lazy val root = (project in file("."))
       "eu.ostrzyciel.jelly" %% "jelly-stream" % jellyV,
       "eu.ostrzyciel.jelly" %% "jelly-jena" % jellyV,
       // "eu.ostrzyciel.jelly" %% "jelly-rdf4j" % jellyV,
-      "org.json4s" %% "json4s-jackson" % "4.0.6",
+      "org.json4s" %% "json4s-jackson" % "4.0.7",
     ),
     assembly / assemblyMergeStrategy := {
       case PathList("module-info.class") => MergeStrategy.discard

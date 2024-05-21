@@ -17,7 +17,7 @@ import scala.concurrent.{Await, ExecutionContext, Future}
 object GrpcStreamBench:
   import Experiments.*
   import Util.*
-  import eu.ostrzyciel.jelly.convert.jena.*
+  import eu.ostrzyciel.jelly.convert.jena.given
 
   val config = ConfigFactory.parseString("akka.http.server.preview.enable-http2 = on")
     .withFallback(ConfigFactory.load())
@@ -70,7 +70,7 @@ object GrpcStreamBench:
     for i <- 1 to NETWORK_REPEATS; expName <- jellyOptionsSmall.keys do
       println(s"Experiment $expName try: $i")
       Await.result(
-        request(client, getJellyOpts(expName, streamType), expName),
+        request(client, getJellyOpts(expName, streamType, true), expName),
         Duration.Inf
       )
 
@@ -104,23 +104,23 @@ object GrpcStreamBench:
     waitFuture flatMap { _ =>
       t0client(expName).append(System.nanoTime())
       val responseStream = client.subscribeRdf(RdfStreamSubscribe(expName, Some(opt)))
-      opt.streamType match
-        case RdfStreamType.TRIPLES =>
+      opt.physicalType match
+        case PhysicalStreamType.TRIPLES =>
           responseStream
-            .via(DecoderFlow.triplesToGrouped)
+            .via(DecoderFlow.decodeTriples.asGraphStream())
             .runWith(countSink)
-        case RdfStreamType.QUADS =>
+        case PhysicalStreamType.QUADS =>
           responseStream
-            .via(DecoderFlow.quadsToGrouped)
+            .via(DecoderFlow.decodeQuads.asDatasetStreamOfQuads())
             .runWith(countSink)
-        case RdfStreamType.GRAPHS =>
+        case PhysicalStreamType.GRAPHS =>
           responseStream
-            .via(DecoderFlow.graphsToGrouped)
+            .via(DecoderFlow.decodeGraphs.asDatasetStream())
             .runWith(countSink)
         case _ => throw new RuntimeException("Unknown stream type")
     } map { (statements, elements) =>
       t1client(expName).append(System.nanoTime())
-      val thing = if opt.streamType.isGraphs then "graphs" else "statements"
+      val thing = if opt.physicalType.isGraphs then "graphs" else "statements"
       println(s"Streaming done, elements: $elements $thing: $statements")
     }
 

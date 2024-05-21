@@ -1,6 +1,6 @@
 package eu.ostrzyciel.jelly.benchmark
 
-import eu.ostrzyciel.jelly.core.proto.v1.{RdfStreamOptions, RdfStreamType}
+import eu.ostrzyciel.jelly.core.proto.v1.RdfStreamOptions
 import eu.ostrzyciel.jelly.stream.{DecoderFlow, JellyIo}
 import org.apache.jena.query.DatasetFactory
 import org.apache.jena.rdf.model.{Model, ModelFactory}
@@ -18,7 +18,7 @@ import scala.concurrent.duration.*
 object FlatSerDesBench extends SerDesBench:
   import Experiments.*
   import Util.*
-  import eu.ostrzyciel.jelly.convert.jena.*
+  import eu.ostrzyciel.jelly.convert.jena.given
   
   private var useQuads = false
   private var elementSize = 0
@@ -51,17 +51,14 @@ object FlatSerDesBench extends SerDesBench:
     if useQuads then tuple(1) else tuple(0)
 
   private def getJellyOpts(exp: String): RdfStreamOptions =
-    jellyOptions(exp).withStreamType(
-      if useQuads then RdfStreamType.QUADS
-      else RdfStreamType.TRIPLES
-    )
+    Experiments.getJellyOpts(exp, if useQuads then "quads" else "triples", false)
 
   private def getSourceFlat(path: String): Either[Seq[Model], Seq[DatasetGraph]] =
     println("Loading the source file...")
     val is = GZIPInputStream(FileInputStream(path))
     if useQuads then
       val readFuture = JellyIo.fromIoStream(is)
-        .via(DecoderFlow.quadsToFlat)
+        .via(DecoderFlow.decodeQuads.asFlatQuadStream())
         .grouped(elementSize)
         .map(ts => {
           val dataset = DatasetFactory.create().asDatasetGraph()
@@ -76,7 +73,7 @@ object FlatSerDesBench extends SerDesBench:
       Right(items)
     else
       val readFuture = JellyIo.fromIoStream(is)
-        .via(DecoderFlow.triplesToFlat)
+        .via(DecoderFlow.decodeTriples.asFlatTripleStream())
         .grouped(elementSize)
         .map(ts => {
           val model = ModelFactory.createDefaultModel()

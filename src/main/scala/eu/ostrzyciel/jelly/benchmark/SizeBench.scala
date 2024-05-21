@@ -53,7 +53,7 @@ object SizeBench extends SerDesBench:
         else (baos, baos)
 
       if experiment.startsWith("jelly") then
-        serJelly(data, getJellyOpts(experiment, streamType), frame => {
+        serJelly(data, getJellyOpts(experiment, streamType, false), frame => {
           val (os, baos) = getOs
           frame.writeTo(os)
           os.close()

@@ -16,7 +16,7 @@ import scala.util.Random
 object StreamSerDesBench extends SerDesBench:
   import Experiments.*
   import Util.*
-  import eu.ostrzyciel.jelly.convert.jena.*
+  import eu.ostrzyciel.jelly.convert.jena.given
 
   // Arguments: [ser/des] [triples/graphs/quads] [source file path]
   def main(args: Array[String]): Unit =
@@ -48,7 +48,7 @@ object StreamSerDesBench extends SerDesBench:
     val is = GZIPInputStream(FileInputStream(path))
     if streamType == "triples" then
       val readFuture = JellyIo.fromIoStream(is)
-        .via(DecoderFlow.triplesToGrouped)
+        .via(DecoderFlow.decodeTriples.asGraphStream())
         .map(ts => {
           val model = ModelFactory.createDefaultModel()
           ts.iterator.foreach(model.getGraph.add)
@@ -62,7 +62,7 @@ object StreamSerDesBench extends SerDesBench:
       Left(items)
     else
       val readFuture = JellyIo.fromIoStream(is)
-        .via(DecoderFlow.quadsToGrouped)
+        .via(DecoderFlow.decodeQuads.asDatasetStreamOfQuads())
         .map(qs => {
           val dataset = DatasetFactory.create().asDatasetGraph()
           qs.iterator.foreach(dataset.add)
@@ -86,7 +86,7 @@ object StreamSerDesBench extends SerDesBench:
       if experiment.startsWith("jelly") then
         val stream = OutputStream.nullOutputStream
         times(experiment) += time {
-          serJelly(sourceData, getJellyOpts(experiment, streamType), frame => frame.writeTo(stream))
+          serJelly(sourceData, getJellyOpts(experiment, streamType, true), frame => frame.writeTo(stream))
         }
       else
         try {
@@ -113,7 +113,7 @@ object StreamSerDesBench extends SerDesBench:
         val serialized = {
           if experiment.startsWith("jelly") then
             val serBuffer = ArrayBuffer[Array[Byte]]()
-            serJelly(source, getJellyOpts(experiment, streamType), frame => serBuffer.append(frame.toByteArray))
+            serJelly(source, getJellyOpts(experiment, streamType, true), frame => serBuffer.append(frame.toByteArray))
             serBuffer
           else
             val serBuffer = ArrayBuffer[Array[Byte]]()

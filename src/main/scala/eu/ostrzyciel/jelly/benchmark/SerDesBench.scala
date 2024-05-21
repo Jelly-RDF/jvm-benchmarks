@@ -16,7 +16,7 @@ import scala.concurrent.ExecutionContext
 import scala.util.Random
 
 trait SerDesBench:
-  import eu.ostrzyciel.jelly.convert.jena.*
+  import eu.ostrzyciel.jelly.convert.jena.{given, *}
   import Experiments.*
 
   protected final type StreamSeq = Either[Iterable[Model], Iterable[DatasetGraph]]
@@ -36,6 +36,7 @@ trait SerDesBench:
   ): Unit =
     val encoder = JenaConverterFactory.encoder(opt)
     sourceData match
+      // TODO: can we use the iterable extensions already provided by Jelly?
       case Left(models) =>
         // TRIPLES
         models.map(m => {
@@ -46,7 +47,7 @@ trait SerDesBench:
           })
           .foreach(closure)
       case Right(datasets) =>
-        if opt.streamType.isGraphs then
+        if opt.physicalType.isGraphs then
           // GRAPHS
           // Note: this implementation does not carry the graphs over frame boundaries.
           datasets.map(ds => {
@@ -77,9 +78,9 @@ trait SerDesBench:
 
   protected final def desJelly(input: Iterable[Array[Byte]], streamType: String): Unit =
     val decoder = streamType match
-      case "triples" => JenaConverterFactory.triplesDecoder
-      case "quads" => JenaConverterFactory.quadsDecoder
-      case "graphs" => JenaConverterFactory.graphsDecoder
+      case "triples" => JenaConverterFactory.triplesDecoder(None)
+      case "quads" => JenaConverterFactory.quadsDecoder(None)
+      case "graphs" => JenaConverterFactory.graphsDecoder(None)
     input
       .map(RdfStreamFrame.parseFrom)
       .map(frame => frame.rows.map(decoder.ingestRow).foreach(_ => {}))

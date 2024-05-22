@@ -36,7 +36,7 @@ trait SerDesBench:
   ): Unit =
     val encoder = JenaConverterFactory.encoder(opt)
     sourceData match
-      // TODO: can we use the iterable extensions already provided by Jelly?
+      // TODO: can we use the iterable-to-stream extensions already provided by Jelly?
       case Left(models) =>
         // TRIPLES
         models.map(m => {

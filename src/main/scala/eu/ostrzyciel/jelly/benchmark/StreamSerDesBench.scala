@@ -1,5 +1,6 @@
 package eu.ostrzyciel.jelly.benchmark
 
+import eu.ostrzyciel.jelly.benchmark.util.*
 import eu.ostrzyciel.jelly.stream.{DecoderFlow, JellyIo}
 import org.apache.jena.query.DatasetFactory
 import org.apache.jena.rdf.model.{Model, ModelFactory}
@@ -43,40 +44,8 @@ object StreamSerDesBench extends SerDesBench:
     ))
     sys.exit()
 
-  private def getSourceData(path: String, streamType: String): Either[Seq[Model], Seq[DatasetGraph]] =
-    println("Loading the source file...")
-    val is = GZIPInputStream(FileInputStream(path))
-    if streamType == "triples" then
-      val readFuture = JellyIo.fromIoStream(is)
-        .via(DecoderFlow.decodeTriples.asGraphStream())
-        .map(ts => {
-          val model = ModelFactory.createDefaultModel()
-          ts.iterator.foreach(model.getGraph.add)
-          model
-        })
-        .runWith(Sink.seq)
-
-      val items = Await.result(readFuture, 3.hours)
-      numStatements = items.map(_.size()).sum
-      numElements = items.size
-      Left(items)
-    else
-      val readFuture = JellyIo.fromIoStream(is)
-        .via(DecoderFlow.decodeQuads.asDatasetStreamOfQuads())
-        .map(qs => {
-          val dataset = DatasetFactory.create().asDatasetGraph()
-          qs.iterator.foreach(dataset.add)
-          dataset
-        })
-        .runWith(Sink.seq)
-
-      val items = Await.result(readFuture, 3.hours)
-      numStatements = items.map(_.asQuads.size).sum
-      numElements = items.size
-      Right(items)
-
   private def mainSer(path: String, streamType: String, exps: Seq[String]): Unit =
-    val sourceData = getSourceData(path, streamType)
+    val (_, _, sourceData) = DataLoader.getSourceData(path, streamType, 0)
 
     for i <- 1 to REPEATS; experiment <- exps do
       System.gc()
@@ -105,7 +74,7 @@ object StreamSerDesBench extends SerDesBench:
         }
 
   private def mainDes(path: String, streamType: String, exps: Seq[String]): Unit =
-    val source = getSourceData(path, streamType)
+    val (_, _, source) = DataLoader.getSourceData(path, streamType, 0)
 
     for experiment <- exps do
       println("Serializing to memory...")

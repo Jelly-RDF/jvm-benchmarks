@@ -14,6 +14,9 @@ object SizeBench extends SerDesBench:
 
   private val sizes: mutable.Map[String, Long] = mutable.Map.empty
 
+  private val zeroIndices: mutable.Map[Long, (Long, Long, Long)] = mutable.Map.empty
+  private val nonZeroIndices: mutable.Map[Long, (Long, Long, Long)] = mutable.Map.empty
+
   // Arguments: [triples/graphs/quads] [element size] [source file path]
   def main(args: Array[String]): Unit =
     val streamType = args(0)
@@ -33,6 +36,8 @@ object SizeBench extends SerDesBench:
       "file" -> filePath,
       "elementSize" -> elementSize,
       "streamType" -> streamType,
+      "zeroLookupIndices" -> zeroIndices.toSeq.sortBy(_._1).map(_._2),
+      "nonZeroLookupIndices" -> nonZeroIndices.toSeq.sortBy(_._1).map(_._2),
     ))
     sys.exit()
 
@@ -53,11 +58,28 @@ object SizeBench extends SerDesBench:
         else (baos, baos)
 
       if experiment.startsWith("jelly") then
+        var i = 0L
         serJelly(data, getJellyOpts(experiment, streamType, false), frame => {
           val (os, baos) = getOs
           frame.writeTo(os)
           os.close()
+
+          val key = i / 10000L
+          val zeros = zeroIndices.getOrElse(key, (0L, 0L, 0L))
+          zeroIndices.update(key, (
+            zeros._1 + frame.rows.count(r => r.row.isPrefix && r.row.prefix.get.id == 0),
+            zeros._2 + frame.rows.count(r => r.row.isName && r.row.name.get.id == 0),
+            zeros._3 + frame.rows.count(r => r.row.isDatatype && r.row.datatype.get.id == 0),
+          ))
+          val nonZeros = nonZeroIndices.getOrElse(key, (0L, 0L, 0L))
+          nonZeroIndices.update(key, (
+            nonZeros._1 + frame.rows.count(r => r.row.isPrefix && r.row.prefix.get.id != 0),
+            nonZeros._2 + frame.rows.count(r => r.row.isName && r.row.name.get.id != 0),
+            nonZeros._3 + frame.rows.count(r => r.row.isDatatype && r.row.datatype.get.id != 0),
+          ))
+
           sizes.updateWith(expName)(_.map(_ + baos.size()).orElse(Some(baos.size())))
+          i += 1
         })
       else
         val sourceFlat = data match

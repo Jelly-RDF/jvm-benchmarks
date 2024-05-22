@@ -1,6 +1,7 @@
 package eu.ostrzyciel.jelly.benchmark
 
 import eu.ostrzyciel.jelly.benchmark.util.DataLoader
+import eu.ostrzyciel.jelly.core.proto.v1.{RdfStreamFrame, RdfStreamRow}
 import org.apache.jena.rdf.model.Model
 import org.apache.jena.sparql.core.DatasetGraph
 
@@ -16,6 +17,9 @@ object SizeBench extends SerDesBench:
 
   private val zeroIndices: mutable.Map[Long, (Long, Long, Long)] = mutable.Map.empty
   private val nonZeroIndices: mutable.Map[Long, (Long, Long, Long)] = mutable.Map.empty
+
+  private val zeroReferences: mutable.Map[Long, (Long, Long)] = mutable.Map.empty
+  private val nonZeroReferences: mutable.Map[Long, (Long, Long)] = mutable.Map.empty
 
   // Arguments: [triples/graphs/quads] [element size] [source file path]
   def main(args: Array[String]): Unit =
@@ -38,9 +42,50 @@ object SizeBench extends SerDesBench:
       "streamType" -> streamType,
       "zeroLookupIndices" -> zeroIndices.toSeq.sortBy(_._1).map(_._2),
       "nonZeroLookupIndices" -> nonZeroIndices.toSeq.sortBy(_._1).map(_._2),
+      "zeroLookupReferences" -> zeroReferences.toSeq.sortBy(_._1).map(_._2),
+      "nonZeroLookupReferences" -> nonZeroReferences.toSeq.sortBy(_._1).map(_._2),
     ))
     sys.exit()
+    
+    
+  def updateDetailedStats(frame: RdfStreamFrame, i: Long): Unit =
+    val key = i / 10000L
+    // Update the counts of zero and non-zero indices in lookup table entries
+    val zeros = zeroIndices.getOrElse(key, (0L, 0L, 0L))
+    zeroIndices.update(key, (
+      zeros._1 + frame.rows.count(r => r.row.isPrefix && r.row.prefix.get.id == 0),
+      zeros._2 + frame.rows.count(r => r.row.isName && r.row.name.get.id == 0),
+      zeros._3 + frame.rows.count(r => r.row.isDatatype && r.row.datatype.get.id == 0),
+    ))
+    val nonZeros = nonZeroIndices.getOrElse(key, (0L, 0L, 0L))
+    nonZeroIndices.update(key, (
+      nonZeros._1 + frame.rows.count(r => r.row.isPrefix && r.row.prefix.get.id != 0),
+      nonZeros._2 + frame.rows.count(r => r.row.isName && r.row.name.get.id != 0),
+      nonZeros._3 + frame.rows.count(r => r.row.isDatatype && r.row.datatype.get.id != 0),
+    ))
 
+    // Update the counts of zero and non-zero references to lookup table entries in IRIs
+    val iris = frame.rows
+      .map(_.row)
+      .collect {
+        case r: RdfStreamRow.Row.Triple =>
+          Seq(r.value.s.term.iri, r.value.p.term.iri, r.value.o.term.iri).flatten
+        case r: RdfStreamRow.Row.Quad =>
+          Seq(r.value.s.term.iri, r.value.p.term.iri, r.value.o.term.iri, r.value.g.graph.iri).flatten
+      }
+      .flatten
+    val zeroRefs = zeroReferences.getOrElse(key, (0L, 0L))
+    zeroReferences.update(key, (
+      zeroRefs._1 + iris.count(_.prefixId == 0),
+      zeroRefs._2 + iris.count(_.nameId == 0),
+    ))
+    val nonZeroRefs = nonZeroReferences.getOrElse(key, (0L, 0L))
+    nonZeroReferences.update(key, (
+      nonZeroRefs._1 + iris.count(_.prefixId != 0),
+      nonZeroRefs._2 + iris.count(_.nameId != 0),
+    ))
+
+  
   def run(data: Either[Seq[Model], Seq[DatasetGraph]], exps: Seq[String], streamType: String): Unit =
     for gzip <- Seq(false, true); experiment <- exps do
       System.gc()
@@ -63,22 +108,11 @@ object SizeBench extends SerDesBench:
           val (os, baos) = getOs
           frame.writeTo(os)
           os.close()
-
-          val key = i / 10000L
-          val zeros = zeroIndices.getOrElse(key, (0L, 0L, 0L))
-          zeroIndices.update(key, (
-            zeros._1 + frame.rows.count(r => r.row.isPrefix && r.row.prefix.get.id == 0),
-            zeros._2 + frame.rows.count(r => r.row.isName && r.row.name.get.id == 0),
-            zeros._3 + frame.rows.count(r => r.row.isDatatype && r.row.datatype.get.id == 0),
-          ))
-          val nonZeros = nonZeroIndices.getOrElse(key, (0L, 0L, 0L))
-          nonZeroIndices.update(key, (
-            nonZeros._1 + frame.rows.count(r => r.row.isPrefix && r.row.prefix.get.id != 0),
-            nonZeros._2 + frame.rows.count(r => r.row.isName && r.row.name.get.id != 0),
-            nonZeros._3 + frame.rows.count(r => r.row.isDatatype && r.row.datatype.get.id != 0),
-          ))
-
           sizes.updateWith(expName)(_.map(_ + baos.size()).orElse(Some(baos.size())))
+          
+          if !gzip then
+            updateDetailedStats(frame, i)
+          
           i += 1
         })
       else

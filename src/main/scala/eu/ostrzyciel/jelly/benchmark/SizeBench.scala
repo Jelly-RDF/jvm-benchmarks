@@ -69,9 +69,9 @@ object SizeBench extends SerDesBench:
       .map(_.row)
       .collect {
         case r: RdfStreamRow.Row.Triple =>
-          Seq(r.value.s.term.iri, r.value.p.term.iri, r.value.o.term.iri).flatten
+          Seq(r.value.subject.sIri, r.value.predicate.pIri, r.value.`object`.oIri).flatten
         case r: RdfStreamRow.Row.Quad =>
-          Seq(r.value.s.term.iri, r.value.p.term.iri, r.value.o.term.iri, r.value.g.graph.iri).flatten
+          Seq(r.value.subject.sIri, r.value.predicate.pIri, r.value.`object`.oIri, r.value.graph.gIri).flatten
       }
       .flatten
     val zeroRefs = zeroReferences.getOrElse(key, (0L, 0L))

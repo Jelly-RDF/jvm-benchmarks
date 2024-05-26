@@ -1,9 +1,10 @@
 package eu.ostrzyciel.jelly.benchmark
 
 import eu.ostrzyciel.jelly.benchmark.util.DataLoader
-import eu.ostrzyciel.jelly.core.proto.v1.{RdfStreamFrame, RdfStreamRow}
+import eu.ostrzyciel.jelly.core.proto.v1.*
 import org.apache.jena.rdf.model.Model
 import org.apache.jena.sparql.core.DatasetGraph
+import scalapb.GeneratedMessage
 
 import java.io.{ByteArrayOutputStream, OutputStream}
 import scala.collection.mutable
@@ -20,6 +21,8 @@ object SizeBench extends SerDesBench:
 
   private val zeroReferences: mutable.Map[Long, (Long, Long)] = mutable.Map.empty
   private val nonZeroReferences: mutable.Map[Long, (Long, Long)] = mutable.Map.empty
+
+  private val ProtoMessageStats: mutable.Map[String, (Long, Long)] = mutable.Map.empty
 
   // Arguments: [triples/graphs/quads] [element size] [source file path]
   def main(args: Array[String]): Unit =
@@ -44,9 +47,9 @@ object SizeBench extends SerDesBench:
       "nonZeroLookupIndices" -> nonZeroIndices.toSeq.sortBy(_._1).map(_._2),
       "zeroLookupReferences" -> zeroReferences.toSeq.sortBy(_._1).map(_._2),
       "nonZeroLookupReferences" -> nonZeroReferences.toSeq.sortBy(_._1).map(_._2),
+      "protoMessageStats" -> ProtoMessageStats,
     ))
     sys.exit()
-    
     
   def updateDetailedStats(frame: RdfStreamFrame, i: Long): Unit =
     val key = i / 10000L
@@ -72,8 +75,23 @@ object SizeBench extends SerDesBench:
           Seq(r.value.subject.sIri, r.value.predicate.pIri, r.value.`object`.oIri).flatten
         case r: RdfStreamRow.Row.Quad =>
           Seq(r.value.subject.sIri, r.value.predicate.pIri, r.value.`object`.oIri, r.value.graph.gIri).flatten
+        case r: RdfStreamRow.Row.GraphStart =>
+          Seq(r.value.graph.gIri).flatten
       }
       .flatten
+    
+    val literals = frame.rows
+      .map(_.row)
+      .collect {
+        case r: RdfStreamRow.Row.Triple =>
+          Seq(r.value.subject.sLiteral, r.value.predicate.pLiteral, r.value.`object`.oLiteral).flatten
+        case r: RdfStreamRow.Row.Quad =>
+          Seq(r.value.subject.sLiteral, r.value.predicate.pLiteral, r.value.`object`.oLiteral, r.value.graph.gLiteral).flatten
+        case r: RdfStreamRow.Row.GraphStart =>
+          Seq(r.value.graph.gLiteral).flatten
+      }
+      .flatten
+    
     val zeroRefs = zeroReferences.getOrElse(key, (0L, 0L))
     zeroReferences.update(key, (
       zeroRefs._1 + iris.count(_.prefixId == 0),
@@ -85,6 +103,29 @@ object SizeBench extends SerDesBench:
       nonZeroRefs._2 + iris.count(_.nameId != 0),
     ))
 
+    val messages: Seq[(String, Seq[GeneratedMessage])] = Seq(
+      "RdfStreamFrame" -> Seq(frame),
+      "RdfStreamRow" -> frame.rows,
+      "RdfTriple" -> frame.rows.flatMap(_.row.triple),
+      "RdfQuad" -> frame.rows.flatMap(_.row.quad),
+      "RdfGraphStart" -> frame.rows.flatMap(_.row.graphStart),
+      "RdfGraphEnd" -> frame.rows.flatMap(_.row.graphEnd),
+      "RdfNameEntry" -> frame.rows.flatMap(_.row.name),
+      "RdfPrefixEntry" -> frame.rows.flatMap(_.row.prefix),
+      "RdfDatatypeEntry" -> frame.rows.flatMap(_.row.datatype),
+      "RdfIri" -> iris,
+      "RdfLiteral" -> literals,
+    )
+    
+    for (name, messages) <- messages do
+      val mStats = ProtoMessageStats.getOrElse(name, (0L, 0L))
+      ProtoMessageStats.update(
+        name, 
+        (
+          mStats._1 + messages.size, 
+          mStats._2 + messages.map(_.serializedSize).sum
+        )
+      )
   
   def run(data: Either[Seq[Model], Seq[DatasetGraph]], exps: Seq[String], streamType: String): Unit =
     for gzip <- Seq(false, true); experiment <- exps do

@@ -58,7 +58,7 @@ object FlatSerDesBench extends SerDesBench:
     val is = GZIPInputStream(FileInputStream(path))
     if useQuads then
       val readFuture = JellyIo.fromIoStream(is)
-        .via(DecoderFlow.decodeQuads.asFlatQuadStream())
+        .via(DecoderFlow.decodeQuads.asFlatQuadStream)
         .grouped(elementSize)
         .map(ts => {
           val dataset = DatasetFactory.create().asDatasetGraph()
@@ -73,7 +73,7 @@ object FlatSerDesBench extends SerDesBench:
       Right(items)
     else
       val readFuture = JellyIo.fromIoStream(is)
-        .via(DecoderFlow.decodeTriples.asFlatTripleStream())
+        .via(DecoderFlow.decodeTriples.asFlatTripleStream)
         .grouped(elementSize)
         .map(ts => {
           val model = ModelFactory.createDefaultModel()

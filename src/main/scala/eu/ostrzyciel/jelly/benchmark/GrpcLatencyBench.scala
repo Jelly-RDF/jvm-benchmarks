@@ -105,13 +105,13 @@ object GrpcLatencyBench:
       val s: Source[IterableOnce[Any], NotUsed] = opt.physicalType match
         case PhysicalStreamType.TRIPLES =>
           responseStream
-            .via(DecoderFlow.decodeTriples.asGraphStream())
+            .via(DecoderFlow.decodeTriples.asGraphStream)
         case PhysicalStreamType.QUADS =>
           responseStream
-            .via(DecoderFlow.decodeQuads.asDatasetStreamOfQuads())
+            .via(DecoderFlow.decodeQuads.asDatasetStreamOfQuads)
         case PhysicalStreamType.GRAPHS =>
           responseStream
-            .via(DecoderFlow.decodeGraphs.asDatasetStream())
+            .via(DecoderFlow.decodeGraphs.asDatasetStream)
         case _ => throw new Error("Unknown stream type")
 
         s.map(_.iterator.size)

@@ -1,4 +1,4 @@
-package eu.ostrzyciel.jelly.benchmark
+package eu.ostrzyciel.jelly.benchmark.traits
 
 import com.typesafe.config.ConfigFactory
 import eu.ostrzyciel.jelly.benchmark.util.*
@@ -16,41 +16,21 @@ import scala.collection.mutable.ArrayBuffer
 import scala.concurrent.ExecutionContext
 import scala.util.Random
 
-trait SerDesBench:
-  import eu.ostrzyciel.jelly.convert.jena.{given, *}
+trait GroupedSerDes extends SerDes:
+  import eu.ostrzyciel.jelly.convert.jena.{*, given}
 
-  implicit protected val system: ActorSystem[Nothing] = ActorSystem(
-    Behaviors.empty, "SerDesBench", ConfigManager.config
-  )
-  implicit protected val ec: ExecutionContext = system.executionContext
-
-  protected var experiments: Seq[String] = _
-  protected var times: Map[String, mutable.ArrayBuffer[Long]] = _
-  protected var streamType: String = _
   protected var numElements: Long = _
   protected var numStatements: Long = _
-  protected var sourceData: BenchmarkData = _
-  
+  protected var sourceData: GroupedData = _
+
   protected final def loadData(path: String, streamType: String, elementSize: Int): Unit =
     val d = DataLoader.getSourceData(path, streamType, elementSize)
     numStatements = d._1
     numElements = d._2
     sourceData = d._3
-
-  protected final def initExperiment(flatStreaming: Boolean, streamType: String): Unit =
-    // Only run Jelly for GRAPHS streams – in Jena it's the same as QUADS
-    val doJena = streamType != "graphs"
-    this.streamType = streamType
-    experiments = Experiments.getFormatKeysToTest(
-      jena = doJena && !flatStreaming, 
-      jenaStreaming = doJena, 
-      jelly = true, 
-      streamType
-    )
-    times = experiments.map(_ -> mutable.ArrayBuffer[Long]()).toMap
-
+  
   protected final def serJelly(
-    sourceData: BenchmarkData, opt: RdfStreamOptions, closure: RdfStreamFrame => Unit
+    sourceData: GroupedData, opt: RdfStreamOptions, closure: RdfStreamFrame => Unit
   ): Unit =
     val encoder = JenaConverterFactory.encoder(opt)
     sourceData match
@@ -68,15 +48,15 @@ trait SerDesBench:
           // GRAPHS
           // Note: this implementation does not carry the graphs over frame boundaries.
           datasets.map(ds => {
-            val rows = ds.asGraphs.flatMap(params => {
-              val (g, triples) = params
-              encoder.startGraph(g) ++
-                triples.flatMap(triple => encoder.addTripleStatement(triple)) ++
-                encoder.endGraph()
-            }).toSeq
-            RdfStreamFrame(rows)
-          })
-          .foreach(closure)
+              val rows = ds.asGraphs.flatMap(params => {
+                val (g, triples) = params
+                encoder.startGraph(g) ++
+                  triples.flatMap(triple => encoder.addTripleStatement(triple)) ++
+                  encoder.endGraph()
+              }).toSeq
+              RdfStreamFrame(rows)
+            })
+            .foreach(closure)
         else
           // QUADS
           datasets.map(ds => {
@@ -103,9 +83,3 @@ trait SerDesBench:
       .map(RdfStreamFrame.parseFrom)
       .map(frame => frame.rows.map(decoder.ingestRow).foreach(_ => {}))
       .foreach(_ => {})
-
-  protected final def desJena(input: InputStream, format: RDFFormat, streamType: String): Unit =
-    (
-      if streamType == "triples" then AsyncParser.asyncParseTriples(input, format.getLang, "")
-      else AsyncParser.asyncParseQuads(input, format.getLang, "")
-    ).forEachRemaining(_ => {})

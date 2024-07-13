@@ -1,4 +1,4 @@
-package eu.ostrzyciel.jelly.benchmark
+package eu.ostrzyciel.jelly.benchmark.util
 
 import com.typesafe.config.Config
 import eu.ostrzyciel.jelly.benchmark.util.ConfigManager
@@ -31,7 +31,7 @@ object Util:
       println()
 
   def saveRunInfo[T](name: String, result: T): Unit =
-    implicit val formats: DefaultFormats.type = org.json4s.DefaultFormats
+    given DefaultFormats.type = org.json4s.DefaultFormats
     val results = Map(
       "name" -> name,
       "result" -> result,

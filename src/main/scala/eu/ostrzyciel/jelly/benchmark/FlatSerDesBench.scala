@@ -1,6 +1,7 @@
 package eu.ostrzyciel.jelly.benchmark
 
-import eu.ostrzyciel.jelly.benchmark.util.Experiments
+import eu.ostrzyciel.jelly.benchmark.traits.{FlatSerDes, SerDes}
+import eu.ostrzyciel.jelly.benchmark.util.{ConfigManager, Experiments}
 import eu.ostrzyciel.jelly.core.proto.v1.RdfStreamOptions
 import eu.ostrzyciel.jelly.stream.{DecoderFlow, JellyIo}
 import org.apache.jena.query.DatasetFactory
@@ -16,100 +17,68 @@ import scala.collection.mutable.ArrayBuffer
 import scala.concurrent.Await
 import scala.concurrent.duration.*
 
-object FlatSerDesBench extends SerDesBench:
+object FlatSerDesBench extends FlatSerDes:
   import eu.ostrzyciel.jelly.benchmark.util.Experiments.*
-  import Util.*
+  import eu.ostrzyciel.jelly.benchmark.util.Util.*
   import eu.ostrzyciel.jelly.convert.jena.given
-  
-  private var useQuads = false
-  private var elementSize = 0
 
-  // Arguments: [ser/des] [element size] [triples/quads] [source file path]
-  def main(args: Array[String]): Unit =
-    if args(2) == "quads" then useQuads = true
-    elementSize = args(1).toInt
+  /**
+   * Benchmark for serializing and deserializing flat RDF streams.
+   * Here we test the DELIMITED variant of Jelly and Jena's statement-level streaming RDF serializers.
+   * 
+   * @param tasks "ser", "des", or "ser,des"
+   * @param streamType "triples", "quads"
+   * @param jellyFrameSize size of Jelly's RdfStreamFrames in rows
+   * @param sourceFilePath path to the source file (only jelly.gz files are supported)
+   */
+  @main
+  def flatSerDesBench(tasks: String, streamType: String, jellyFrameSize: Int, sourceFilePath: String): Unit =
+    val taskSeq = tasks.split(',')
+    loadData(sourceFilePath, streamType)
 
-    if args(0) == "ser" then
-      mainSer(args(3))
-    else if args(0) == "des" then
-      mainDes(args(3))
+    def saveResults(task: String): Unit =
+      saveRunInfo(s"flat_raw_$task", Map(
+        "statements" -> numStatements,
+        "order" -> experiments,
+        "times" -> times,
+        "file" -> sourceFilePath,
+        "task" -> task,
+        "streamType" -> streamType,
+      ))
 
-    printSpeed(numStatements, times)
-    saveRunInfo(s"flat_raw_${args(0)}", Map(
-      "elements" -> numElements,
-      "statements" -> numStatements,
-      "order" -> experiments,
-      "times" -> times,
-      "file" -> args(3),
-      "task" -> args(0),
-      "streamType" -> args(2),
-      "elementSize" -> args(1),
-    ))
+    if taskSeq.contains("ser") then
+      initExperiment(flatStreaming = false, streamType)
+      mainSer(jellyFrameSize)
+      saveResults("ser")
+      System.gc()
+    if taskSeq.contains("des") then
+      initExperiment(flatStreaming = false, streamType)
+      mainDes(jellyFrameSize)
+      saveResults("des")
+
     sys.exit()
 
-  private def getFormat(exp: String): RDFFormat =
-    val tuple = jenaFormats(exp)
-    if useQuads then tuple(1) else tuple(0)
 
-  private def getJellyOpts(exp: String): RdfStreamOptions =
-    Experiments.getJellyOpts(exp, if useQuads then "quads" else "triples", false)
-
-  private def getSourceFlat(path: String): Either[Seq[Model], Seq[DatasetGraph]] =
-    println("Loading the source file...")
-    val is = GZIPInputStream(FileInputStream(path))
-    if useQuads then
-      val readFuture = JellyIo.fromIoStream(is)
-        .via(DecoderFlow.decodeQuads.asFlatQuadStream)
-        .grouped(elementSize)
-        .map(ts => {
-          val dataset = DatasetFactory.create().asDatasetGraph()
-          ts.foreach(dataset.add)
-          dataset
-        })
-        .runWith(Sink.seq)
-
-      val items = Await.result(readFuture, 3.hours)
-      numStatements = items.map(_.asQuads.size).sum
-      numElements = items.size
-      Right(items)
-    else
-      val readFuture = JellyIo.fromIoStream(is)
-        .via(DecoderFlow.decodeTriples.asFlatTripleStream)
-        .grouped(elementSize)
-        .map(ts => {
-          val model = ModelFactory.createDefaultModel()
-          ts.foreach(model.getGraph.add)
-          model
-        })
-        .runWith(Sink.seq)
-
-      val items = Await.result(readFuture, 3.hours)
-      numStatements = items.map(_.size()).sum
-      numElements = items.size
-      Left(items)
-
-  private def mainSer(path: String): Unit =
-    val sourceData = getSourceFlat(path)
-
-    for i <- 1 to REPEATS; experiment <- experiments do
+  private def mainSer(jellyFrameSize: Int): Unit =
+    for i <- 1 to ConfigManager.benchmarkRepeats; experiment <- experiments do
       System.gc()
       println("Sleeping 3 seconds...")
       Thread.sleep(3000)
       println(f"Try: $i, experiment: $experiment")
+      val outputStream = OutputStream.nullOutputStream
+      
       if experiment.startsWith("jelly") then
-        val stream = OutputStream.nullOutputStream
         times(experiment) += time {
-          serJelly(sourceData, getJellyOpts(experiment), frame => frame.writeTo(stream))
+          serJelly(
+            getJellyOpts(experiment, streamType, grouped = false),
+            _.writeDelimitedTo(outputStream),
+            jellyFrameSize
+          )
         }
       else
         try {
-          val sourceFlat = sourceData match
-            case Left(v) => v
-            case Right(v) => v
-
           times(experiment) += time {
-            for item <- sourceFlat do
-              serJena(item, getFormat(experiment), OutputStream.nullOutputStream)
+            serJena(getJenaFormat(experiment, streamType).get, outputStream)
           }
         } catch {
           case e: Exception =>
@@ -117,42 +86,41 @@ object FlatSerDesBench extends SerDesBench:
             e.printStackTrace()
         }
 
-  private def mainDes(path: String): Unit =
-    val source = getSourceFlat(path)
-
+  private def mainDes(jellyFrameSize: Int): Unit =
     for experiment <- experiments do
       println("Serializing to memory...")
       try {
-        val serialized = {
-          if experiment.startsWith("jelly") then
-            val serBuffer = ArrayBuffer[Array[Byte]]()
-            serJelly(source, getJellyOpts(experiment), frame => serBuffer.append(frame.toByteArray))
-            serBuffer
-          else
-            val serBuffer = ArrayBuffer[Array[Byte]]()
-            val sourceFlat = source match
-              case Left(v) => v
-              case Right(v) => v
-            for item <- sourceFlat do
-              val oStream = new ByteArrayOutputStream()
-              serJena(item, getFormat(experiment), oStream)
-              serBuffer.append(oStream.toByteArray)
-            serBuffer
-        }
+        
+        val serialized = if experiment.startsWith("jelly") then
+          // Keep the buffer withing this code block to deallocate it after we finish serializing
+          val outputStream = new ByteArrayOutputStream()
+          serJelly(
+            getJellyOpts(experiment, streamType, grouped = false),
+            _.writeDelimitedTo(outputStream),
+            jellyFrameSize,
+          )
+          outputStream.toByteArray
+        else
+          val outputStream = new ByteArrayOutputStream()
+          serJena(getJenaFormat(experiment, streamType).get, outputStream)
+          outputStream.toByteArray
 
-        for i <- 1 to REPEATS do
+        for i <- 1 to ConfigManager.benchmarkRepeats do
           System.gc()
           println("Sleeping 3 seconds...")
           Thread.sleep(3000)
           println(f"Try: $i, experiment: $experiment")
           if experiment.startsWith("jelly") then
             times(experiment) += time {
-              desJelly(serialized, if useQuads then "quads" else "triples")
+              desJelly(new ByteArrayInputStream(serialized), streamType)
             }
           else
             times(experiment) += time {
-              for buffer <- serialized do
-                desJena(new ByteArrayInputStream(buffer), getFormat(experiment), useQuads)
+              desJena(
+                new ByteArrayInputStream(serialized),
+                getJenaFormat(experiment, streamType).get,
+                streamType
+              )
             }
       } catch {
         case e: Exception =>

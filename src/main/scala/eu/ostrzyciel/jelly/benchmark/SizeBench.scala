@@ -1,5 +1,6 @@
 package eu.ostrzyciel.jelly.benchmark
 
+import eu.ostrzyciel.jelly.benchmark.traits.{GroupedSerDes, SerDes}
 import eu.ostrzyciel.jelly.benchmark.util.DataLoader
 import eu.ostrzyciel.jelly.core.proto.v1.*
 import org.apache.jena.rdf.model.Model
@@ -10,9 +11,9 @@ import java.io.{ByteArrayOutputStream, OutputStream}
 import scala.collection.mutable
 import scala.util.Random
 
-object SizeBench extends SerDesBench:
+object SizeBench extends GroupedSerDes:
   import eu.ostrzyciel.jelly.benchmark.util.Experiments.*
-  import Util.*
+  import eu.ostrzyciel.jelly.benchmark.util.Util.*
 
   private val sizes: mutable.Map[String, Long] = mutable.Map.empty
 

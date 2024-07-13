@@ -19,7 +19,7 @@ import scala.concurrent.duration.*
 
 object GrpcLatencyBench:
   import eu.ostrzyciel.jelly.benchmark.util.Experiments.*
-  import Util.*
+  import eu.ostrzyciel.jelly.benchmark.util.Util.*
   import eu.ostrzyciel.jelly.convert.jena.given
 
   val config = ConfigFactory.parseString("akka.http.server.preview.enable-http2 = on")
@@ -84,7 +84,7 @@ object GrpcLatencyBench:
     val tsClient = new mutable.ArrayBuffer[Long]()
 
     val server = {
-      implicit val sys: ActorSystem[_] = serverSystem
+      given ActorSystem[_] = serverSystem
       val serverOptions = RdfStreamServer.Options(
         host = "127.0.0.1",
         port = config.getInt("pekko.grpc.client.jelly-rdf-client.port"),
@@ -97,7 +97,7 @@ object GrpcLatencyBench:
     }
 
     val clientFut = {
-      implicit val sys: ActorSystem[_] = clientSystem
+      given ActorSystem[_] = clientSystem
       val settings = GrpcClientSettings.fromConfig("jelly-rdf-client")
       val client = RdfStreamServiceClient(settings)
 

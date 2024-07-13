@@ -16,14 +16,14 @@ import scala.concurrent.{Await, ExecutionContext, Future}
 
 object GrpcStreamBench:
   import eu.ostrzyciel.jelly.benchmark.util.Experiments.*
-  import Util.*
+  import eu.ostrzyciel.jelly.benchmark.util.Util.*
   import eu.ostrzyciel.jelly.convert.jena.given
 
   val config = ConfigFactory.parseString("akka.http.server.preview.enable-http2 = on")
     .withFallback(ConfigFactory.load())
 
-  implicit private val system: ActorSystem[Nothing] = ActorSystem(Behaviors.empty, "StreamServer", config)
-  implicit private val ec: ExecutionContext = system.executionContext
+  given system: ActorSystem[Nothing] = ActorSystem(Behaviors.empty, "StreamServer", config)
+  given ExecutionContext = system.executionContext
 
   private val t0client: Map[String, ArrayBuffer[Long]] = jellyOptionsSmall.keys.map(_ -> ArrayBuffer[Long]()).toMap
   private val t0server: Map[String, ArrayBuffer[Long]] = jellyOptionsSmall.keys.map(_ -> ArrayBuffer[Long]()).toMap
@@ -60,8 +60,8 @@ object GrpcStreamBench:
     }
 
   private def runClient(streamType: String, numElements: Long, numStatements: Long, file: String, gzip: Boolean): Unit =
-    implicit val clientSystem: ActorSystem[_] = ActorSystem(Behaviors.empty, "StreamClient", config)
-    implicit val ec: ExecutionContext = clientSystem.executionContext
+    given clientSystem: ActorSystem[_] = ActorSystem(Behaviors.empty, "StreamClient", config)
+    given ExecutionContext = clientSystem.executionContext
 
     val settings = GrpcClientSettings.fromConfig("jelly-rdf-client")
 
@@ -94,7 +94,7 @@ object GrpcStreamBench:
     sys.exit()
 
   private def request(client: RdfStreamServiceClient, opt: RdfStreamOptions, expName: String)
-    (implicit ec: ExecutionContext, system: ActorSystem[_]):
+    (using ExecutionContext, ActorSystem[_]):
   Future[Unit] =
     System.gc()
     println("Sleeping 5 seconds...")

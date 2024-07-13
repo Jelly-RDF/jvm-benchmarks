@@ -1,14 +1,13 @@
 package eu.ostrzyciel.jelly.benchmark.util
 
-import eu.ostrzyciel.jelly.benchmark.Util
 import eu.ostrzyciel.jelly.stream.{DecoderFlow, JellyIo}
 import org.apache.commons.compress.archivers.tar.TarArchiveInputStream
 import org.apache.commons.io.IOUtils
-import org.apache.jena.graph.{Graph, GraphMemFactory}
+import org.apache.jena.graph.{Graph, GraphMemFactory, Triple}
 import org.apache.jena.query.DatasetFactory
 import org.apache.jena.rdf.model.{Model, ModelFactory}
 import org.apache.jena.riot.{Lang, RDFParser}
-import org.apache.jena.sparql.core.{DatasetGraph, DatasetGraphFactory, NamedGraphWrapper}
+import org.apache.jena.sparql.core.{DatasetGraph, DatasetGraphFactory, NamedGraphWrapper, Quad}
 import org.apache.jena.sparql.graph.GraphFactory
 import org.apache.pekko.actor.typed.ActorSystem
 import org.apache.pekko.stream.*
@@ -17,7 +16,7 @@ import org.apache.pekko.util.ByteString
 
 import java.io.FileInputStream
 import java.util.zip.GZIPInputStream
-import scala.concurrent.Await
+import scala.concurrent.{Await, ExecutionContext}
 import scala.concurrent.duration.*
 
 object DataLoader:
@@ -39,8 +38,8 @@ object DataLoader:
    * @param elementSize number of elements in a single chunk – set to 0 to disable chunking
    * @return (numStatements, numElements, elements)
    */
-  def getSourceData(path: String, streamType: String, elementSize: Int)(implicit as: ActorSystem[_]):
-  (Long, Long, BenchmarkData) =
+  def getSourceData(path: String, streamType: String, elementSize: Int)(using ActorSystem[_]):
+  (Long, Long, GroupedData) =
     if path.endsWith(".jelly.gz") then
       getSourceDataJelly(path, streamType, elementSize)
     else
@@ -52,8 +51,8 @@ object DataLoader:
    * @param elementSize number of elements in a single chunk – set to 0 to disable chunking
    * @return (numStatements, numElements, elements)
    */
-  def getSourceDataTarGz(path: String, streamType: String, elementSize: Int)(implicit as: ActorSystem[_]):
-  (Long, Long, BenchmarkData) =
+  def getSourceDataTarGz(path: String, streamType: String, elementSize: Int)(using ActorSystem[_]):
+  (Long, Long, GroupedData) =
     println("Loading the source file...")
     val lang = if streamType == "triples" then Lang.TTL else Lang.TRIG
     val is = TarArchiveInputStream(
@@ -104,7 +103,7 @@ object DataLoader:
    * @param elementSize number of elements in a single chunk – set to 0 to disable chunking
    * @return (numStatements, numElements, elements)
    */
-  def getSourceDataJelly(path: String, streamType: String, elementSize: Int)(implicit as: ActorSystem[_]):
+  def getSourceDataJelly(path: String, streamType: String, elementSize: Int)(using ActorSystem[_]):
   (Long, Long, Either[Seq[Model], Seq[DatasetGraph]]) =
     println("Loading the source file...")
     val is = GZIPInputStream(FileInputStream(path))
@@ -136,3 +135,19 @@ object DataLoader:
 
       val items = Await.result(readFuture, 3.hours)
       (items.map(_.asQuads.size).sum, items.size, Right(items))
+
+  def getSourceDataJellyFlat(path: String, streamType: String)(using ActorSystem[_], ExecutionContext): 
+  Either[Seq[Triple], Seq[Quad]] =
+    println("Loading the source file...")
+    val is = GZIPInputStream(FileInputStream(path))
+    val s = JellyIo.fromIoStream(is)
+    val future = if streamType == "triples" then
+      s.via(DecoderFlow.decodeTriples.asFlatTripleStream)
+        .runWith(Sink.seq)
+        .map(ts => Left(ts))
+    else
+      s.via(DecoderFlow.decodeQuads.asFlatQuadStream)
+        .runWith(Sink.seq)
+        .map(qs => Right(qs))
+
+    Await.result(future, 3.hours)

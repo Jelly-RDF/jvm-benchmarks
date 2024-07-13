@@ -1,5 +1,6 @@
 package eu.ostrzyciel.jelly.benchmark
 
+import eu.ostrzyciel.jelly.benchmark.traits.{GroupedSerDes, SerDes}
 import eu.ostrzyciel.jelly.benchmark.util.*
 import eu.ostrzyciel.jelly.stream.{DecoderFlow, JellyIo}
 import org.apache.jena.query.DatasetFactory
@@ -14,7 +15,7 @@ import scala.concurrent.Await
 import scala.concurrent.duration.*
 import scala.util.Random
 
-object StreamSerDesBench extends SerDesBench:
+object GroupedSerDesBench extends GroupedSerDes:
   import Experiments.*
   import Util.*
   import eu.ostrzyciel.jelly.convert.jena.given
@@ -26,7 +27,7 @@ object StreamSerDesBench extends SerDesBench:
    * @param sourceFilePath path to the source file
    */
   @main
-  def main(tasks: String, streamType: String, elementSize: Int, sourceFilePath: String): Unit =
+  def groupedSerDesBench(tasks: String, streamType: String, elementSize: Int, sourceFilePath: String): Unit =
     val taskSeq = tasks.split(',')
     loadData(sourceFilePath, streamType, elementSize)
 
@@ -64,7 +65,7 @@ object StreamSerDesBench extends SerDesBench:
       if experiment.startsWith("jelly") then
         val stream = OutputStream.nullOutputStream
         times(experiment) += time {
-          serJelly(sourceData, getJellyOpts(experiment, streamType, true), frame => frame.writeTo(stream))
+          serJelly(sourceData, getJellyOpts(experiment, streamType, grouped = true), frame => frame.writeTo(stream))
         }
       else
         try {

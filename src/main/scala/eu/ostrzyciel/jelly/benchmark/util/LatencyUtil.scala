@@ -1,7 +1,5 @@
 package eu.ostrzyciel.jelly.benchmark.util
 
-import eu.ostrzyciel.jelly.benchmark.Experiments
-
 import scala.collection.mutable
 import scala.concurrent.duration.*
 
@@ -13,7 +11,7 @@ object LatencyUtil:
     (Some(100.micros), 1_000),
     (None, 10_000),
   )
-  private val testRuns = 1 to Experiments.NETWORK_REPEATS
+  private val testRuns = 1 to ConfigManager.benchmarkNetworkRepeats
 
   def run(call: (Option[FiniteDuration], Int) => Seq[(Long, Long)], results: mutable.Map[String, Seq[(Long, Long)]]):
   Unit =

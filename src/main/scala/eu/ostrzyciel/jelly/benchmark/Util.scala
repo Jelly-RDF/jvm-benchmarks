@@ -1,6 +1,7 @@
 package eu.ostrzyciel.jelly.benchmark
 
 import com.typesafe.config.Config
+import eu.ostrzyciel.jelly.benchmark.util.ConfigManager
 import org.json4s.DefaultFormats
 import org.json4s.jackson.Serialization
 
@@ -29,14 +30,14 @@ object Util:
       println("Times (ns): " + results)
       println()
 
-  def saveRunInfo[T](name: String, config: Config, result: T): Unit =
+  def saveRunInfo[T](name: String, result: T): Unit =
     implicit val formats: DefaultFormats.type = org.json4s.DefaultFormats
     val results = Map(
       "name" -> name,
       "result" -> result,
     )
 
-    val filename = config.getString("jelly.debug.output-dir") +
+    val filename = ConfigManager.debugOutputDir +
       name + "_" + System.currentTimeMillis() / 1000 + ".json"
     Files.writeString(
       Paths.get(filename),

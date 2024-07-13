@@ -15,7 +15,7 @@ import scala.concurrent.duration.*
 import scala.concurrent.{Await, ExecutionContext, Future}
 
 object GrpcStreamBench:
-  import Experiments.*
+  import eu.ostrzyciel.jelly.benchmark.util.Experiments.*
   import Util.*
   import eu.ostrzyciel.jelly.convert.jena.given
 

@@ -18,7 +18,7 @@ import scala.concurrent.Await
 import scala.concurrent.duration.*
 
 object GrpcLatencyBench:
-  import Experiments.*
+  import eu.ostrzyciel.jelly.benchmark.util.Experiments.*
   import Util.*
   import eu.ostrzyciel.jelly.convert.jena.given
 

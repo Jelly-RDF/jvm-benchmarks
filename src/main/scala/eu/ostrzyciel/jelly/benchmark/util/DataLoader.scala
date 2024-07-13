@@ -40,7 +40,7 @@ object DataLoader:
    * @return (numStatements, numElements, elements)
    */
   def getSourceData(path: String, streamType: String, elementSize: Int)(implicit as: ActorSystem[_]):
-  (Long, Long, Either[Seq[Model], Seq[DatasetGraph]]) =
+  (Long, Long, BenchmarkData) =
     if path.endsWith(".jelly.gz") then
       getSourceDataJelly(path, streamType, elementSize)
     else
@@ -53,7 +53,7 @@ object DataLoader:
    * @return (numStatements, numElements, elements)
    */
   def getSourceDataTarGz(path: String, streamType: String, elementSize: Int)(implicit as: ActorSystem[_]):
-  (Long, Long, Either[Seq[Model], Seq[DatasetGraph]]) =
+  (Long, Long, BenchmarkData) =
     println("Loading the source file...")
     val lang = if streamType == "triples" then Lang.TTL else Lang.TRIG
     val is = TarArchiveInputStream(

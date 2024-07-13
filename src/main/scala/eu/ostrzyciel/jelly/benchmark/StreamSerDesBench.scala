@@ -19,35 +19,44 @@ object StreamSerDesBench extends SerDesBench:
   import Util.*
   import eu.ostrzyciel.jelly.convert.jena.given
 
-  // Arguments: [ser/des] [triples/graphs/quads] [source file path]
-  def main(args: Array[String]): Unit =
-    val task = args(0)
-    val streamType = args(1)
-    val filePath = args(2)
-    // Only run Jelly for GRAPHS streams – in Jena it's the same as QUADS
-    val experiments2 = (if streamType != "graphs" then experiments else Random.shuffle(jellyOptions.keys)).toSeq
+  /**
+   * @param tasks "ser", "des", or "ser,des"
+   * @param streamType "triples", "quads", "graphs"
+   * @param elementSize 0 for the same as in the original stream, or a number for the size of the elements
+   * @param sourceFilePath path to the source file
+   */
+  @main
+  def main(tasks: String, streamType: String, elementSize: Int, sourceFilePath: String): Unit =
+    val taskSeq = tasks.split(',')
+    loadData(sourceFilePath, streamType, elementSize)
 
-    if task == "ser" then
-      mainSer(filePath, streamType, experiments2)
-    else if task == "des" then
-      mainDes(filePath, streamType, experiments2)
+    def saveResults(task: String): Unit =
+      saveRunInfo(s"stream_raw_$task", Map(
+        "order" -> experiments,
+        "times" -> times,
+        "file" -> sourceFilePath,
+        "task" -> task,
+        "streamType" -> streamType,
+        "elementSize" -> elementSize,
+        "elements" -> numElements,
+        "statements" -> numStatements,
+      ))
 
-    printSpeed(numStatements, times)
-    saveRunInfo(s"stream_raw_${args(0)}", conf, Map(
-      "elements" -> numElements,
-      "statements" -> numStatements,
-      "order" -> experiments,
-      "times" -> times,
-      "file" -> filePath,
-      "task" -> task,
-      "streamType" -> streamType,
-    ))
+    if taskSeq.contains("ser") then
+      initExperiment(flatStreaming = false, streamType)
+      mainSer()
+      saveResults("ser")
+      System.gc()
+    if taskSeq.contains("des") then
+      initExperiment(flatStreaming = false, streamType)
+      mainDes()
+      saveResults("des")
+    
     sys.exit()
+    
 
-  private def mainSer(path: String, streamType: String, exps: Seq[String]): Unit =
-    val (_, _, sourceData) = DataLoader.getSourceData(path, streamType, 0)
-
-    for i <- 1 to REPEATS; experiment <- exps do
+  private def mainSer(): Unit =
+    for i <- 1 to ConfigManager.benchmarkRepeats; experiment <- experiments do
       System.gc()
       println("Sleeping 3 seconds...")
       Thread.sleep(3000)
@@ -65,7 +74,7 @@ object StreamSerDesBench extends SerDesBench:
 
           times(experiment) += time {
             for item <- sourceFlat do
-              serJena(item, getFormat(experiment, streamType), OutputStream.nullOutputStream)
+              serJena(item, getJenaFormat(experiment, streamType).get, OutputStream.nullOutputStream)
           }
         } catch {
           case e: Exception =>
@@ -73,30 +82,33 @@ object StreamSerDesBench extends SerDesBench:
             e.printStackTrace()
         }
 
-  private def mainDes(path: String, streamType: String, exps: Seq[String]): Unit =
-    val (_, _, source) = DataLoader.getSourceData(path, streamType, 0)
-
-    for experiment <- exps do
+  private def mainDes(): Unit =
+    for experiment <- experiments do
       println("Serializing to memory...")
       try {
         val serialized = {
           if experiment.startsWith("jelly") then
             val serBuffer = ArrayBuffer[Array[Byte]]()
-            serJelly(source, getJellyOpts(experiment, streamType, true), frame => serBuffer.append(frame.toByteArray))
+            serJelly(
+              sourceData, 
+              getJellyOpts(experiment, streamType, true),
+              frame => serBuffer.append(frame.toByteArray)
+            )
             serBuffer
           else
+            val jenaFormat = getJenaFormat(experiment, streamType).get
             val serBuffer = ArrayBuffer[Array[Byte]]()
-            val sourceFlat = source match
+            val sourceFlat = sourceData match
               case Left(v) => v
               case Right(v) => v
             for item <- sourceFlat do
               val oStream = new ByteArrayOutputStream()
-              serJena(item, getFormat(experiment, streamType), oStream)
+              serJena(item, jenaFormat, oStream)
               serBuffer.append(oStream.toByteArray)
             serBuffer
         }
 
-        for i <- 1 to REPEATS do
+        for i <- 1 to ConfigManager.benchmarkRepeats do
           System.gc()
           println("Sleeping 3 seconds...")
           Thread.sleep(3000)
@@ -106,9 +118,14 @@ object StreamSerDesBench extends SerDesBench:
               desJelly(serialized, streamType)
             }
           else
+            val jenaFormat = getJenaFormat(experiment, streamType).get
             times(experiment) += time {
               for buffer <- serialized do
-                desJena(new ByteArrayInputStream(buffer), getFormat(experiment, streamType), streamType != "triples")
+                desJena(
+                  new ByteArrayInputStream(buffer),
+                  jenaFormat, 
+                  streamType
+                )
             }
       } catch {
         case e: Exception =>

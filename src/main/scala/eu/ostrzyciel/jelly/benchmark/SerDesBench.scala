@@ -1,6 +1,7 @@
 package eu.ostrzyciel.jelly.benchmark
 
 import com.typesafe.config.ConfigFactory
+import eu.ostrzyciel.jelly.benchmark.util.*
 import eu.ostrzyciel.jelly.core.proto.v1.{RdfStreamFrame, RdfStreamOptions}
 import org.apache.jena.rdf.model.Model
 import org.apache.jena.riot.system.AsyncParser
@@ -17,26 +18,42 @@ import scala.util.Random
 
 trait SerDesBench:
   import eu.ostrzyciel.jelly.convert.jena.{given, *}
-  import Experiments.*
 
-  protected final type StreamSeq = Either[Iterable[Model], Iterable[DatasetGraph]]
-
-  protected val conf = ConfigFactory.load()
-
-  implicit protected val system: ActorSystem[Nothing] = ActorSystem(Behaviors.empty, "SerDesBench", conf)
+  implicit protected val system: ActorSystem[Nothing] = ActorSystem(
+    Behaviors.empty, "SerDesBench", ConfigManager.config
+  )
   implicit protected val ec: ExecutionContext = system.executionContext
 
-  protected val experiments = Random.shuffle(jenaFormats.keys ++ jellyOptions.keys)
-  protected val times: Map[String, mutable.ArrayBuffer[Long]] = experiments.map(_ -> mutable.ArrayBuffer[Long]()).toMap
-  protected var numStatements: Long = 0
-  protected var numElements: Long = 0
+  protected var experiments: Seq[String] = _
+  protected var times: Map[String, mutable.ArrayBuffer[Long]] = _
+  protected var streamType: String = _
+  protected var numElements: Long = _
+  protected var numStatements: Long = _
+  protected var sourceData: BenchmarkData = _
+  
+  protected final def loadData(path: String, streamType: String, elementSize: Int): Unit =
+    val d = DataLoader.getSourceData(path, streamType, elementSize)
+    numStatements = d._1
+    numElements = d._2
+    sourceData = d._3
+
+  protected final def initExperiment(flatStreaming: Boolean, streamType: String): Unit =
+    // Only run Jelly for GRAPHS streams – in Jena it's the same as QUADS
+    val doJena = streamType != "graphs"
+    this.streamType = streamType
+    experiments = Experiments.getFormatKeysToTest(
+      jena = doJena && !flatStreaming, 
+      jenaStreaming = doJena, 
+      jelly = true, 
+      streamType
+    )
+    times = experiments.map(_ -> mutable.ArrayBuffer[Long]()).toMap
 
   protected final def serJelly(
-    sourceData: StreamSeq, opt: RdfStreamOptions, closure: RdfStreamFrame => Unit
+    sourceData: BenchmarkData, opt: RdfStreamOptions, closure: RdfStreamFrame => Unit
   ): Unit =
     val encoder = JenaConverterFactory.encoder(opt)
     sourceData match
-      // TODO: can we use the iterable-to-stream extensions already provided by Jelly?
       case Left(models) =>
         // TRIPLES
         models.map(m => {
@@ -69,6 +86,7 @@ trait SerDesBench:
               RdfStreamFrame(rows)
             })
             .foreach(closure)
+
   protected final def serJena(sourceData: Model | DatasetGraph, format: RDFFormat, outputStream: OutputStream): Unit =
     val writer = RDFWriter.create().format(format)
     sourceData match
@@ -86,8 +104,8 @@ trait SerDesBench:
       .map(frame => frame.rows.map(decoder.ingestRow).foreach(_ => {}))
       .foreach(_ => {})
 
-  protected final def desJena(input: InputStream, format: RDFFormat, useQuads: Boolean): Unit =
+  protected final def desJena(input: InputStream, format: RDFFormat, streamType: String): Unit =
     (
-      if !useQuads then AsyncParser.asyncParseTriples(input, format.getLang, "")
+      if streamType == "triples" then AsyncParser.asyncParseTriples(input, format.getLang, "")
       else AsyncParser.asyncParseQuads(input, format.getLang, "")
     ).forEachRemaining(_ => {})

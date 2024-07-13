@@ -1,5 +1,6 @@
 package eu.ostrzyciel.jelly.benchmark
 
+import eu.ostrzyciel.jelly.benchmark.util.Experiments
 import eu.ostrzyciel.jelly.core.proto.v1.RdfStreamOptions
 import eu.ostrzyciel.jelly.stream.{DecoderFlow, JellyIo}
 import org.apache.jena.query.DatasetFactory
@@ -16,7 +17,7 @@ import scala.concurrent.Await
 import scala.concurrent.duration.*
 
 object FlatSerDesBench extends SerDesBench:
-  import Experiments.*
+  import eu.ostrzyciel.jelly.benchmark.util.Experiments.*
   import Util.*
   import eu.ostrzyciel.jelly.convert.jena.given
   
@@ -34,7 +35,7 @@ object FlatSerDesBench extends SerDesBench:
       mainDes(args(3))
 
     printSpeed(numStatements, times)
-    saveRunInfo(s"flat_raw_${args(0)}", conf, Map(
+    saveRunInfo(s"flat_raw_${args(0)}", Map(
       "elements" -> numElements,
       "statements" -> numStatements,
       "order" -> experiments,

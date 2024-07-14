@@ -38,8 +38,6 @@ object SizeBench extends GroupedSerDes:
   private def run(): Unit =
     for gzip <- Seq(false, true); experiment <- experiments do
       System.gc()
-      println("Sleeping 3 seconds...")
-      Thread.sleep(3000)
       println(f"Running experiment $experiment with gzip $gzip")
 
       val expName = if gzip then s"$experiment-gzip" else experiment

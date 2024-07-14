@@ -26,7 +26,7 @@ object GroupedSerDesBench extends GroupedSerDes:
     loadData(sourceFilePath, streamType, elementSize, if elements == 0 then None else Some(elements))
 
     def saveResults(task: String): Unit =
-      saveRunInfo(s"stream_raw_$task", Map(
+      saveRunInfo(s"grouped_raw_$task", Map(
         "order" -> experiments,
         "times" -> times,
         "file" -> sourceFilePath,

@@ -19,9 +19,9 @@ object GrpcThroughputBench extends Grpc:
   import eu.ostrzyciel.jelly.benchmark.util.Util.*
   import eu.ostrzyciel.jelly.convert.jena.given
 
-  private val t0client: Map[String, ArrayBuffer[Long]] = experiments.map(_ -> ArrayBuffer[Long]()).toMap
-  private val t0server: Map[String, ArrayBuffer[Long]] = experiments.map(_ -> ArrayBuffer[Long]()).toMap
-  private val t1client: Map[String, ArrayBuffer[Long]] = experiments.map(_ -> ArrayBuffer[Long]()).toMap
+  private var t0client: Map[String, ArrayBuffer[Long]] = _
+  private var t0server: Map[String, ArrayBuffer[Long]] = _
+  private var t1client: Map[String, ArrayBuffer[Long]] = _
 
   case class StreamResult(t0client: Long, t0server: Long, t1client: Long):
     def time: Long = t1client - t0server
@@ -39,6 +39,10 @@ object GrpcThroughputBench extends Grpc:
 
     initExperiments(streamType)
     loadData(sourceFilePath, streamType, elements)
+    val filler = () => experiments.map(_ -> ArrayBuffer[Long]()).toMap
+    t0client = filler()
+    t0server = filler()
+    t1client = filler()
 
     println("Starting server...")
     val serverOptions = RdfStreamServer.Options(
@@ -79,7 +83,7 @@ object GrpcThroughputBench extends Grpc:
     ).toMap
 
     printSpeed(numStatements, times.map((k, v) => k -> v.map(_.time)))
-    saveRunInfo("grpc_stream", Map(
+    saveRunInfo("grpc_throughput", Map(
       "times" -> times,
       "elements" -> numElements,
       "statements" -> numStatements,

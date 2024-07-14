@@ -7,7 +7,7 @@ import org.apache.jena.graph.{Graph, GraphMemFactory, Triple}
 import org.apache.jena.query.DatasetFactory
 import org.apache.jena.rdf.model.{Model, ModelFactory}
 import org.apache.jena.riot.{Lang, RDFParser}
-import org.apache.jena.sparql.core.{DatasetGraph, DatasetGraphFactory, NamedGraphWrapper, Quad}
+import org.apache.jena.sparql.core.{DatasetGraph, DatasetGraphFactory, Quad}
 import org.apache.pekko.actor.typed.ActorSystem
 import org.apache.pekko.stream.*
 import org.apache.pekko.stream.scaladsl.*
@@ -21,15 +21,6 @@ import scala.concurrent.{Await, ExecutionContext}
 object DataLoader:
   import Util.*
   import eu.ostrzyciel.jelly.convert.jena.given
-
-  // TODO: remove this in Jena 5
-  // Reimplement graph makers for the dataset factory.
-  // This way we use the new (faster?) Graph implementation that will be the default in Jena 5.
-  DatasetGraphFactory.graphMakerNamedGraphMem = name => {
-    val g = GraphMemFactory.createDefaultGraphSameTerm()
-    new NamedGraphWrapper(name, g)
-  }
-  DatasetGraphFactory.graphMakerMem = name => GraphMemFactory.createDefaultGraphSameTerm()
 
   /**
    * @param path        path to the source file

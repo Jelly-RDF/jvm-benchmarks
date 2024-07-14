@@ -39,12 +39,12 @@ object FlatSerDesBench extends FlatSerDes:
       ))
 
     if taskSeq.contains("ser") then
-      initExperiment(flatStreaming = false, streamType)
+      initExperiment(flatStreaming = true, streamType)
       mainSer(jellyFrameSize)
       saveResults("ser")
       System.gc()
     if taskSeq.contains("des") then
-      initExperiment(flatStreaming = false, streamType)
+      initExperiment(flatStreaming = true, streamType)
       mainDes(jellyFrameSize)
       saveResults("des")
 

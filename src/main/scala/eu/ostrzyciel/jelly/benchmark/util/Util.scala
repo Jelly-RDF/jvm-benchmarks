@@ -35,7 +35,7 @@ object Util:
       "result" -> result,
     )
 
-    val filename = ConfigManager.debugOutputDir +
+    val filename = ConfigManager.benchmarkOutputDir +
       name + "_" + System.currentTimeMillis() / 1000 + ".json"
     Files.writeString(
       Paths.get(filename),

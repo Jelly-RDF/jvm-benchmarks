@@ -1,12 +1,12 @@
 package eu.ostrzyciel.jelly.benchmark
 
-import com.typesafe.config.ConfigFactory
-import eu.ostrzyciel.jelly.benchmark.util.{DataLoader, RdfStreamServiceFromData}
+import eu.ostrzyciel.jelly.benchmark.traits.Grpc
+import eu.ostrzyciel.jelly.benchmark.util.*
 import eu.ostrzyciel.jelly.core.proto.v1.*
 import eu.ostrzyciel.jelly.grpc.RdfStreamServer
 import eu.ostrzyciel.jelly.stream.DecoderFlow
+import org.apache.pekko.NotUsed
 import org.apache.pekko.actor.typed.ActorSystem
-import org.apache.pekko.actor.typed.scaladsl.Behaviors
 import org.apache.pekko.grpc.GrpcClientSettings
 import org.apache.pekko.stream.scaladsl.*
 
@@ -14,32 +14,30 @@ import scala.collection.mutable.ArrayBuffer
 import scala.concurrent.duration.*
 import scala.concurrent.{Await, ExecutionContext, Future}
 
-object GrpcStreamBench:
+object GrpcThroughputBench extends Grpc:
   import eu.ostrzyciel.jelly.benchmark.util.Experiments.*
   import eu.ostrzyciel.jelly.benchmark.util.Util.*
   import eu.ostrzyciel.jelly.convert.jena.given
 
-  val config = ConfigFactory.parseString("akka.http.server.preview.enable-http2 = on")
-    .withFallback(ConfigFactory.load())
-
-  given system: ActorSystem[Nothing] = ActorSystem(Behaviors.empty, "StreamServer", config)
-  given ExecutionContext = system.executionContext
-
-  private val t0client: Map[String, ArrayBuffer[Long]] = jellyOptionsSmall.keys.map(_ -> ArrayBuffer[Long]()).toMap
-  private val t0server: Map[String, ArrayBuffer[Long]] = jellyOptionsSmall.keys.map(_ -> ArrayBuffer[Long]()).toMap
-  private val t1client: Map[String, ArrayBuffer[Long]] = jellyOptionsSmall.keys.map(_ -> ArrayBuffer[Long]()).toMap
+  private val t0client: Map[String, ArrayBuffer[Long]] = experiments.map(_ -> ArrayBuffer[Long]()).toMap
+  private val t0server: Map[String, ArrayBuffer[Long]] = experiments.map(_ -> ArrayBuffer[Long]()).toMap
+  private val t1client: Map[String, ArrayBuffer[Long]] = experiments.map(_ -> ArrayBuffer[Long]()).toMap
 
   case class StreamResult(t0client: Long, t0server: Long, t1client: Long):
-    def time = t1client - t0server
+    def time: Long = t1client - t0server
 
-  // Args: [gzip? 0/1] [triples/graphs/quads] [element size] [source file path]
-  def main(args: Array[String]): Unit =
-    val gzip = args(0) == "1"
-    val streamType = args(1)
-    val elementSize = args(2).toInt
-    val sourceFilePath = args(3)
+  /**
+   * @param gzip Whether to use gzip compression
+   * @param streamType The type of stream to use (triples, graphs, quads)
+   * @param sourceFilePath The path to the source file
+   */
+  @main
+  def runGrpcThroughputBench(gzip: Boolean, streamType: String, sourceFilePath: String): Unit =
+    given ActorSystem[_] = serverSystem
+    given ExecutionContext = serverSystem.executionContext
 
-    val (numStatements, numElements, data) = DataLoader.getSourceData(sourceFilePath, streamType, elementSize)
+    initExperiments(streamType)
+    loadData(sourceFilePath, streamType)
 
     println("Starting server...")
     val serverOptions = RdfStreamServer.Options(
@@ -47,47 +45,46 @@ object GrpcStreamBench:
       port = config.getInt("pekko.grpc.client.jelly-rdf-client.port"),
       enableGzip = gzip,
     )
-    val service = new RdfStreamServiceFromData(data) {
-      override def subscribeRdf(in: RdfStreamSubscribe) =
+    val service = new RdfStreamServiceFromData(sourceData) {
+      override def subscribeRdf(in: RdfStreamSubscribe): Source[RdfStreamFrame, NotUsed] =
         t0server(in.topic).append(System.nanoTime())
         super.subscribeRdf(in)
     }
     new RdfStreamServer(serverOptions, service).run() map { binding =>
       println("Started server: " + binding)
-      runClient(streamType, numElements, numStatements, sourceFilePath, gzip)
+      runClient(gzip)
     } recover {
       case e: Throwable => e.printStackTrace()
     }
 
-  private def runClient(streamType: String, numElements: Long, numStatements: Long, file: String, gzip: Boolean): Unit =
-    given clientSystem: ActorSystem[_] = ActorSystem(Behaviors.empty, "StreamClient", config)
+  private def runClient(gzip: Boolean): Unit =
+    given ActorSystem[_] = clientSystem
     given ExecutionContext = clientSystem.executionContext
 
     val settings = GrpcClientSettings.fromConfig("jelly-rdf-client")
-
     val client = RdfStreamServiceClient(settings)
 
-    for i <- 1 to NETWORK_REPEATS; expName <- jellyOptionsSmall.keys do
+    for i <- 1 to ConfigManager.benchmarkNetworkRepeats; expName <- experiments do
       println(s"Experiment $expName try: $i")
       Await.result(
-        request(client, getJellyOpts(expName, streamType, true), expName),
+        request(client, getJellyOpts(expName, streamType, grouped = true), expName),
         Duration.Inf
       )
 
-    val times = jellyOptionsSmall.keys.map(expName =>
+    val times = experiments.map(expName =>
       expName -> t0client(expName).lazyZip(t0server(expName)).lazyZip(t1client(expName))
         .map((t0c, t0s, t1c) => StreamResult(t0c, t0s, t1c))
         .toSeq
     ).toMap
 
     printSpeed(numStatements, times.map((k, v) => k -> v.map(_.time)))
-    saveRunInfo("grpc_stream", config, Map(
+    saveRunInfo("grpc_stream", Map(
       "times" -> times,
       "elements" -> numElements,
       "statements" -> numStatements,
-      "order" -> jellyOptionsSmall.keys.toSeq,
+      "order" -> experiments,
       "useGzip" -> gzip,
-      "file" -> file,
+      "file" -> sourceFilePath,
       "streamType" -> streamType,
       "port" -> config.getInt("pekko.grpc.client.jelly-rdf-client.port"),
     ))

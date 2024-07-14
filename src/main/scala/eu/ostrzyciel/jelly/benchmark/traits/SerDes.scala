@@ -1,21 +1,15 @@
 package eu.ostrzyciel.jelly.benchmark.traits
 
-import com.typesafe.config.ConfigFactory
 import eu.ostrzyciel.jelly.benchmark.util.*
-import eu.ostrzyciel.jelly.convert.jena.JenaConverterFactory
-import eu.ostrzyciel.jelly.core.proto.v1.{RdfStreamFrame, RdfStreamOptions}
-import org.apache.jena.rdf.model.Model
+import org.apache.jena.riot.RDFFormat
 import org.apache.jena.riot.system.AsyncParser
-import org.apache.jena.riot.{RDFFormat, RDFWriter}
-import org.apache.jena.sparql.core.DatasetGraph
 import org.apache.pekko.actor.typed.ActorSystem
 import org.apache.pekko.actor.typed.scaladsl.Behaviors
 
-import java.io.{InputStream, OutputStream}
+import java.io.InputStream
 import scala.collection.mutable
 import scala.collection.mutable.ArrayBuffer
 import scala.concurrent.ExecutionContext
-import scala.util.Random
 
 trait SerDes:
   protected given system: ActorSystem[Nothing] = ActorSystem(

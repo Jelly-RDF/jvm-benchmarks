@@ -1,6 +1,5 @@
 package eu.ostrzyciel.jelly.benchmark.util
 
-import eu.ostrzyciel.jelly.core.JellyOptions
 import eu.ostrzyciel.jelly.core.proto.v1.*
 import org.apache.jena.riot.RDFFormat
 

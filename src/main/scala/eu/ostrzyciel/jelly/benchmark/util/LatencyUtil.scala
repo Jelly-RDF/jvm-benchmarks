@@ -4,20 +4,13 @@ import scala.collection.mutable
 import scala.concurrent.duration.*
 
 object LatencyUtil:
-  private val intervals = Seq(
-    // Run the constrained variant only on 1000 messages to avoid waiting for a few lifetimes
-    (Some(10.millis), 1_000),
-    (Some(1.milli), 1_000),
-    (Some(100.micros), 1_000),
-    (None, 10_000),
-  )
-  private val testRuns = 1 to ConfigManager.benchmarkNetworkRepeats
+  private val testRepeats = 1 to ConfigManager.benchmarkNetworkRepeats
 
   def run(call: (Option[FiniteDuration], Int) => Seq[(Long, Long)], results: mutable.Map[String, Seq[(Long, Long)]]):
   Unit =
     for
-      (interval, elements) <- intervals
-      run <- testRuns
+      (elements, interval) <- ConfigManager.benchmarkLatencyCases
+      run <- testRepeats
     do
       val key = s"$interval $run"
       println("Sleeping 3 seconds...")

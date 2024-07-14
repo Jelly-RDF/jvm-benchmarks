@@ -8,7 +8,6 @@ import org.apache.jena.query.DatasetFactory
 import org.apache.jena.rdf.model.{Model, ModelFactory}
 import org.apache.jena.riot.{Lang, RDFParser}
 import org.apache.jena.sparql.core.{DatasetGraph, DatasetGraphFactory, NamedGraphWrapper, Quad}
-import org.apache.jena.sparql.graph.GraphFactory
 import org.apache.pekko.actor.typed.ActorSystem
 import org.apache.pekko.stream.*
 import org.apache.pekko.stream.scaladsl.*
@@ -16,8 +15,8 @@ import org.apache.pekko.util.ByteString
 
 import java.io.FileInputStream
 import java.util.zip.GZIPInputStream
-import scala.concurrent.{Await, ExecutionContext}
 import scala.concurrent.duration.*
+import scala.concurrent.{Await, ExecutionContext}
 
 object DataLoader:
   import Util.*

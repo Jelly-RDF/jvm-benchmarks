@@ -1,7 +1,6 @@
 package eu.ostrzyciel.jelly.benchmark
 
-import eu.ostrzyciel.jelly.benchmark.traits.{GroupedSerDes, SerDes}
-import eu.ostrzyciel.jelly.benchmark.util.DataLoader
+import eu.ostrzyciel.jelly.benchmark.traits.GroupedSerDes
 import eu.ostrzyciel.jelly.core.proto.v1.*
 import org.apache.jena.rdf.model.Model
 import org.apache.jena.sparql.core.DatasetGraph
@@ -9,7 +8,6 @@ import scalapb.GeneratedMessage
 
 import java.io.{ByteArrayOutputStream, OutputStream}
 import scala.collection.mutable
-import scala.util.Random
 
 object SizeBench extends GroupedSerDes:
   import eu.ostrzyciel.jelly.benchmark.util.Experiments.*
@@ -31,7 +29,7 @@ object SizeBench extends GroupedSerDes:
    * @param sourceFilePath path to the source file
    */
   @main
-  def main(streamType: String, elementSize: Int, sourceFilePath: String): Unit =
+  def runSizeBench(streamType: String, elementSize: Int, sourceFilePath: String): Unit =
     initExperiment(flatStreaming = false, streamType)
     loadData(sourceFilePath, streamType, elementSize)
     run()

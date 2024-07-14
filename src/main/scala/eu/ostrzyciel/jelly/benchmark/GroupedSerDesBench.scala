@@ -1,24 +1,16 @@
 package eu.ostrzyciel.jelly.benchmark
 
-import eu.ostrzyciel.jelly.benchmark.traits.{GroupedSerDes, SerDes}
+import eu.ostrzyciel.jelly.benchmark.traits.GroupedSerDes
 import eu.ostrzyciel.jelly.benchmark.util.*
-import eu.ostrzyciel.jelly.stream.{DecoderFlow, JellyIo}
-import org.apache.jena.query.DatasetFactory
-import org.apache.jena.rdf.model.{Model, ModelFactory}
+import org.apache.jena.rdf.model.Model
 import org.apache.jena.sparql.core.DatasetGraph
-import org.apache.pekko.stream.scaladsl.Sink
 
-import java.io.{ByteArrayInputStream, ByteArrayOutputStream, FileInputStream, OutputStream}
-import java.util.zip.GZIPInputStream
+import java.io.{ByteArrayInputStream, ByteArrayOutputStream, OutputStream}
 import scala.collection.mutable.ArrayBuffer
-import scala.concurrent.Await
-import scala.concurrent.duration.*
-import scala.util.Random
 
 object GroupedSerDesBench extends GroupedSerDes:
-  import Experiments.*
-  import Util.*
-  import eu.ostrzyciel.jelly.convert.jena.given
+  import eu.ostrzyciel.jelly.benchmark.util.Experiments.*
+  import eu.ostrzyciel.jelly.benchmark.util.Util.*
 
   /**
    * @param tasks "ser", "des", or "ser,des"
@@ -27,7 +19,7 @@ object GroupedSerDesBench extends GroupedSerDes:
    * @param sourceFilePath path to the source file
    */
   @main
-  def groupedSerDesBench(tasks: String, streamType: String, elementSize: Int, sourceFilePath: String): Unit =
+  def runGroupedSerDesBench(tasks: String, streamType: String, elementSize: Int, sourceFilePath: String): Unit =
     val taskSeq = tasks.split(',')
     loadData(sourceFilePath, streamType, elementSize)
 

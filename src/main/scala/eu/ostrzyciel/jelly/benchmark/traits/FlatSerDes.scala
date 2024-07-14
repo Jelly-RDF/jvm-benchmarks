@@ -3,7 +3,6 @@ package eu.ostrzyciel.jelly.benchmark.traits
 import eu.ostrzyciel.jelly.benchmark.util.{DataLoader, FlatData}
 import eu.ostrzyciel.jelly.convert.jena.JenaConverterFactory
 import eu.ostrzyciel.jelly.core.proto.v1.{RdfStreamFrame, RdfStreamOptions}
-import eu.ostrzyciel.jelly.stream.JellyIo
 import org.apache.jena.riot.RDFFormat
 import org.apache.jena.riot.system.StreamRDFWriter
 

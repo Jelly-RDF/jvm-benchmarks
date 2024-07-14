@@ -1,38 +1,27 @@
 package eu.ostrzyciel.jelly.benchmark
 
-import eu.ostrzyciel.jelly.benchmark.traits.{FlatSerDes, SerDes}
+import eu.ostrzyciel.jelly.benchmark.traits.FlatSerDes
 import eu.ostrzyciel.jelly.benchmark.util.{ConfigManager, Experiments}
-import eu.ostrzyciel.jelly.core.proto.v1.RdfStreamOptions
-import eu.ostrzyciel.jelly.stream.{DecoderFlow, JellyIo}
-import org.apache.jena.query.DatasetFactory
-import org.apache.jena.rdf.model.{Model, ModelFactory}
-import org.apache.jena.riot.RDFFormat
-import org.apache.jena.sparql.core.DatasetGraph
-import org.apache.pekko.stream.scaladsl.Sink
 
-import java.io.{ByteArrayInputStream, ByteArrayOutputStream, FileInputStream, OutputStream}
-import java.util.zip.GZIPInputStream
+import java.io.{ByteArrayInputStream, ByteArrayOutputStream, OutputStream}
 import scala.collection.mutable
 import scala.collection.mutable.ArrayBuffer
-import scala.concurrent.Await
-import scala.concurrent.duration.*
 
 object FlatSerDesBench extends FlatSerDes:
   import eu.ostrzyciel.jelly.benchmark.util.Experiments.*
   import eu.ostrzyciel.jelly.benchmark.util.Util.*
-  import eu.ostrzyciel.jelly.convert.jena.given
 
   /**
    * Benchmark for serializing and deserializing flat RDF streams.
    * Here we test the DELIMITED variant of Jelly and Jena's statement-level streaming RDF serializers.
-   * 
+   *
    * @param tasks "ser", "des", or "ser,des"
    * @param streamType "triples", "quads"
    * @param jellyFrameSize size of Jelly's RdfStreamFrames in rows
    * @param sourceFilePath path to the source file (only jelly.gz files are supported)
    */
   @main
-  def flatSerDesBench(tasks: String, streamType: String, jellyFrameSize: Int, sourceFilePath: String): Unit =
+  def runFlatSerDesBench(tasks: String, streamType: String, jellyFrameSize: Int, sourceFilePath: String): Unit =
     val taskSeq = tasks.split(',')
     loadData(sourceFilePath, streamType)
 
@@ -66,7 +55,7 @@ object FlatSerDesBench extends FlatSerDes:
       Thread.sleep(3000)
       println(f"Try: $i, experiment: $experiment")
       val outputStream = OutputStream.nullOutputStream
-      
+
       if experiment.startsWith("jelly") then
         times(experiment) += time {
           serJelly(
@@ -90,7 +79,7 @@ object FlatSerDesBench extends FlatSerDes:
     for experiment <- experiments do
       println("Serializing to memory...")
       try {
-        
+
         val serialized = if experiment.startsWith("jelly") then
           // Keep the buffer withing this code block to deallocate it after we finish serializing
           val outputStream = new ByteArrayOutputStream()

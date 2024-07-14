@@ -1,7 +1,5 @@
 package eu.ostrzyciel.jelly.benchmark.util
 
-import com.typesafe.config.Config
-import eu.ostrzyciel.jelly.benchmark.util.ConfigManager
 import org.json4s.DefaultFormats
 import org.json4s.jackson.Serialization
 

@@ -1,32 +1,26 @@
 package eu.ostrzyciel.jelly.benchmark
 
-import com.typesafe.config.ConfigFactory
-import eu.ostrzyciel.jelly.benchmark.util.{DataLoader, LatencyUtil, RdfStreamServiceFromData}
+import eu.ostrzyciel.jelly.benchmark.GrpcThroughputBench.initExperiments
+import eu.ostrzyciel.jelly.benchmark.traits.Grpc
+import eu.ostrzyciel.jelly.benchmark.util.*
 import eu.ostrzyciel.jelly.core.proto.v1.*
 import eu.ostrzyciel.jelly.grpc.RdfStreamServer
 import eu.ostrzyciel.jelly.stream.*
 import org.apache.jena.rdf.model.Model
 import org.apache.jena.sparql.core.DatasetGraph
-import org.apache.pekko.NotUsed
 import org.apache.pekko.actor.typed.ActorSystem
-import org.apache.pekko.actor.typed.scaladsl.Behaviors
 import org.apache.pekko.grpc.GrpcClientSettings
 import org.apache.pekko.stream.scaladsl.Source
+import org.apache.pekko.{Done, NotUsed}
 
 import scala.collection.mutable
-import scala.concurrent.Await
 import scala.concurrent.duration.*
+import scala.concurrent.{Await, Future}
 
-object GrpcLatencyBench:
+object GrpcLatencyBench extends Grpc:
   import eu.ostrzyciel.jelly.benchmark.util.Experiments.*
   import eu.ostrzyciel.jelly.benchmark.util.Util.*
   import eu.ostrzyciel.jelly.convert.jena.given
-
-  val config = ConfigFactory.parseString("akka.http.server.preview.enable-http2 = on")
-    .withFallback(ConfigFactory.load())
-
-  val serverSystem: ActorSystem[_] = ActorSystem(Behaviors.empty, "StreamServer", config)
-  val clientSystem: ActorSystem[_] = ActorSystem(Behaviors.empty, "StreamClient", config)
 
   class LatencyStreamService(data: Either[Seq[Model], Seq[DatasetGraph]], interval: Option[FiniteDuration],
     elements: Int, timestamps: mutable.ArrayBuffer[Long])
@@ -47,30 +41,30 @@ object GrpcLatencyBench:
             t
           })
 
-  // Arguments: [gzip? 0/1] [triples/graphs/quads] [source file path]
-  def main(args: Array[String]): Unit =
-    println("Loading data...")
-    val gzip = args(0) == "1"
-    val streamType = args(1)
-    val sourceFilePath = args(2)
+  /**
+   * @param gzip Whether to use gzip compression
+   * @param streamType The type of stream to use (triples, graphs, quads)
+   * @param sourceFilePath The path to the source file
+   */
+  @main
+  def runGrpcLatencyBench(gzip: Boolean, streamType: String, sourceFilePath: String): Unit =
+    initExperiments(streamType)
+    loadData(sourceFilePath, streamType)
 
-    val (numStatements, numElements, data) = DataLoader
-      .getSourceData(sourceFilePath, streamType, 0)(serverSystem)
-
-    val resultMap: Map[String, mutable.Map[String, Seq[(Long, Long)]]] = jellyOptionsSmall.keys
+    val resultMap: Map[String, mutable.Map[String, Seq[(Long, Long)]]] = experiments
       .map(_ -> mutable.Map[String, Seq[(Long, Long)]]()).toMap
 
-    for exp <- jellyOptionsSmall.keys do
+    for exp <- experiments do
       println(s"Running experiment $exp")
       LatencyUtil.run(
-        (i, el) => runOne(data, i, el, gzip, getJellyOpts(exp, streamType, true)),
+        (i, el) => runOne(i, el, gzip, getJellyOpts(exp, streamType, true)),
         resultMap(exp)
       )
-    saveRunInfo("grpc_latency", config, Map(
+    saveRunInfo("grpc_latency", Map(
       "times" -> resultMap,
       "elements" -> numElements,
       "statements" -> numStatements,
-      "order" -> jellyOptionsSmall.keys.toSeq,
+      "order" -> experiments,
       "useGzip" -> gzip,
       "file" -> sourceFilePath,
       "streamType" -> streamType,
@@ -78,8 +72,9 @@ object GrpcLatencyBench:
     ))
     sys.exit()
 
-  def runOne(sourceData: Either[Seq[Model], Seq[DatasetGraph]], interval: Option[FiniteDuration], elements: Int,
-    gzip: Boolean, opt: RdfStreamOptions) =
+  private def runOne(
+    interval: Option[FiniteDuration], elements: Int, gzip: Boolean, opt: RdfStreamOptions
+  ) =
     val tsServer = new mutable.ArrayBuffer[Long]()
     val tsClient = new mutable.ArrayBuffer[Long]()
 
@@ -96,7 +91,7 @@ object GrpcLatencyBench:
       s
     }
 
-    val clientFut = {
+    val clientFut: Future[Done] = {
       given ActorSystem[_] = clientSystem
       val settings = GrpcClientSettings.fromConfig("jelly-rdf-client")
       val client = RdfStreamServiceClient(settings)
@@ -114,10 +109,8 @@ object GrpcLatencyBench:
             .via(DecoderFlow.decodeGraphs.asDatasetStream)
         case _ => throw new Error("Unknown stream type")
 
-        s.map(_.iterator.size)
-          .runForeach(_ =>
-            tsClient.append(System.nanoTime)
-          )
+      s.map(_.iterator.size)
+        .runForeach(_ => tsClient.append(System.nanoTime))
     }
 
     Await.result(clientFut, Duration.Inf)

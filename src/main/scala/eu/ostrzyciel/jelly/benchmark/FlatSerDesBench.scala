@@ -18,12 +18,15 @@ object FlatSerDesBench extends FlatSerDes:
    * @param tasks "ser", "des", or "ser,des"
    * @param streamType "triples", "quads"
    * @param jellyFrameSize size of Jelly's RdfStreamFrames in rows
+   * @param statements number of statements to process or 0 to process all
    * @param sourceFilePath path to the source file (only jelly.gz files are supported)
    */
   @main
-  def runFlatSerDesBench(tasks: String, streamType: String, jellyFrameSize: Int, sourceFilePath: String): Unit =
+  def runFlatSerDesBench(
+    tasks: String, streamType: String, jellyFrameSize: Int, statements: Int, sourceFilePath: String
+  ): Unit =
     val taskSeq = tasks.split(',')
-    loadData(sourceFilePath, streamType)
+    loadData(sourceFilePath, streamType, statements)
 
     def saveResults(task: String): Unit =
       saveRunInfo(s"flat_raw_$task", Map(

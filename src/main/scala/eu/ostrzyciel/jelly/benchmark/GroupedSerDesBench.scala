@@ -16,12 +16,14 @@ object GroupedSerDesBench extends GroupedSerDes:
    * @param tasks "ser", "des", or "ser,des"
    * @param streamType "triples", "quads", "graphs"
    * @param elementSize 0 for the same as in the original stream, or a number for the size of the elements
+   * @param elements number of elements to process or 0 to process all
    * @param sourceFilePath path to the source file
    */
   @main
-  def runGroupedSerDesBench(tasks: String, streamType: String, elementSize: Int, sourceFilePath: String): Unit =
+  def runGroupedSerDesBench(tasks: String, streamType: String, elementSize: Int, elements: Int, sourceFilePath: String): 
+  Unit =
     val taskSeq = tasks.split(',')
-    loadData(sourceFilePath, streamType, elementSize)
+    loadData(sourceFilePath, streamType, elementSize, if elements == 0 then None else Some(elements))
 
     def saveResults(task: String): Unit =
       saveRunInfo(s"stream_raw_$task", Map(

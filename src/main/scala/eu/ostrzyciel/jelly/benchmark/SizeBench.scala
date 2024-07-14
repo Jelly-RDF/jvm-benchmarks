@@ -1,10 +1,8 @@
 package eu.ostrzyciel.jelly.benchmark
 
 import eu.ostrzyciel.jelly.benchmark.traits.GroupedSerDes
-import eu.ostrzyciel.jelly.core.proto.v1.*
 import org.apache.jena.rdf.model.Model
 import org.apache.jena.sparql.core.DatasetGraph
-import scalapb.GeneratedMessage
 
 import java.io.{ByteArrayOutputStream, OutputStream}
 import scala.collection.mutable
@@ -15,23 +13,16 @@ object SizeBench extends GroupedSerDes:
 
   private val sizes: mutable.Map[String, Long] = mutable.Map.empty
 
-  private val zeroIndices: mutable.Map[Long, (Long, Long, Long)] = mutable.Map.empty
-  private val nonZeroIndices: mutable.Map[Long, (Long, Long, Long)] = mutable.Map.empty
-
-  private val zeroReferences: mutable.Map[Long, (Long, Long)] = mutable.Map.empty
-  private val nonZeroReferences: mutable.Map[Long, (Long, Long)] = mutable.Map.empty
-
-  private val ProtoMessageStats: mutable.Map[String, (Long, Long)] = mutable.Map.empty
-
   /**
    * @param streamType "triples", "quads", "graphs"
    * @param elementSize 0 for the same as in the original stream, or a number for the size of the elements
+   * @param elements number of elements to process or 0 to process all
    * @param sourceFilePath path to the source file
    */
   @main
-  def runSizeBench(streamType: String, elementSize: Int, sourceFilePath: String): Unit =
+  def runSizeBench(streamType: String, elementSize: Int, elements: Int, sourceFilePath: String): Unit =
     initExperiment(flatStreaming = false, streamType)
-    loadData(sourceFilePath, streamType, elementSize)
+    loadData(sourceFilePath, streamType, elementSize, if elements == 0 then None else Some(elements))
     run()
     saveRunInfo(s"size_$streamType", Map(
       "elements" -> numElements,
@@ -41,11 +32,6 @@ object SizeBench extends GroupedSerDes:
       "file" -> sourceFilePath,
       "elementSize" -> elementSize,
       "streamType" -> streamType,
-      "zeroLookupIndices" -> zeroIndices.toSeq.sortBy(_._1).map(_._2),
-      "nonZeroLookupIndices" -> nonZeroIndices.toSeq.sortBy(_._1).map(_._2),
-      "zeroLookupReferences" -> zeroReferences.toSeq.sortBy(_._1).map(_._2),
-      "nonZeroLookupReferences" -> nonZeroReferences.toSeq.sortBy(_._1).map(_._2),
-      "protoMessageStats" -> ProtoMessageStats,
     ))
     sys.exit()
 
@@ -65,101 +51,29 @@ object SizeBench extends GroupedSerDes:
           (new java.util.zip.GZIPOutputStream(baos), baos)
         else (baos, baos)
 
-      if experiment.startsWith("jelly") then
-        var i = 0L
-        serJelly(sourceData, getJellyOpts(experiment, streamType, grouped = false), frame => {
-          val (os, baos) = getOs
-          frame.writeTo(os)
-          os.close()
-          sizes.updateWith(expName)(_.map(_ + baos.size()).orElse(Some(baos.size())))
-
-          if !gzip then
-            updateDetailedStats(frame, i)
-
-          i += 1
-        })
-      else
-        val sourceFlat = sourceData match
-          case Left(v) => v
-          case Right(v) => v
-        for item <- sourceFlat do
-          val (os, baos) = getOs
-          serJena(item, getJenaFormat(experiment, streamType).get, os)
-          os.close()
-          sizes.updateWith(expName)(_.map(_ + baos.size()).orElse(Some(baos.size())))
-    
-  private def updateDetailedStats(frame: RdfStreamFrame, i: Long): Unit =
-    val key = i / 10000L
-    // Update the counts of zero and non-zero indices in lookup table entries
-    val zeros = zeroIndices.getOrElse(key, (0L, 0L, 0L))
-    zeroIndices.update(key, (
-      zeros._1 + frame.rows.count(r => r.row.isPrefix && r.row.prefix.get.id == 0),
-      zeros._2 + frame.rows.count(r => r.row.isName && r.row.name.get.id == 0),
-      zeros._3 + frame.rows.count(r => r.row.isDatatype && r.row.datatype.get.id == 0),
-    ))
-    val nonZeros = nonZeroIndices.getOrElse(key, (0L, 0L, 0L))
-    nonZeroIndices.update(key, (
-      nonZeros._1 + frame.rows.count(r => r.row.isPrefix && r.row.prefix.get.id != 0),
-      nonZeros._2 + frame.rows.count(r => r.row.isName && r.row.name.get.id != 0),
-      nonZeros._3 + frame.rows.count(r => r.row.isDatatype && r.row.datatype.get.id != 0),
-    ))
-
-    // Update the counts of zero and non-zero references to lookup table entries in IRIs
-    val iris = frame.rows
-      .map(_.row)
-      .collect {
-        case r: RdfStreamRow.Row.Triple =>
-          Seq(r.value.subject.sIri, r.value.predicate.pIri, r.value.`object`.oIri).flatten
-        case r: RdfStreamRow.Row.Quad =>
-          Seq(r.value.subject.sIri, r.value.predicate.pIri, r.value.`object`.oIri, r.value.graph.gIri).flatten
-        case r: RdfStreamRow.Row.GraphStart =>
-          Seq(r.value.graph.gIri).flatten
+      try {
+        if experiment.startsWith("jelly") then
+          var i = 0L
+          serJelly(sourceData, getJellyOpts(experiment, streamType, grouped = false), frame => {
+            val (os, baos) = getOs
+            frame.writeTo(os)
+            os.close()
+            sizes.updateWith(expName)(_.map(_ + baos.size()).orElse(Some(baos.size())))
+            i += 1
+          })
+        else
+          val sourceFlat = sourceData match
+            case Left(v) => v
+            case Right(v) => v
+          for item <- sourceFlat do
+            val (os, baos) = getOs
+            serJena(item, getJenaFormat(experiment, streamType).get, os)
+            os.close()
+            sizes.updateWith(expName)(_.map(_ + baos.size()).orElse(Some(baos.size())))
       }
-      .flatten
-    
-    val literals = frame.rows
-      .map(_.row)
-      .collect {
-        case r: RdfStreamRow.Row.Triple =>
-          Seq(r.value.subject.sLiteral, r.value.predicate.pLiteral, r.value.`object`.oLiteral).flatten
-        case r: RdfStreamRow.Row.Quad =>
-          Seq(r.value.subject.sLiteral, r.value.predicate.pLiteral, r.value.`object`.oLiteral, r.value.graph.gLiteral).flatten
-        case r: RdfStreamRow.Row.GraphStart =>
-          Seq(r.value.graph.gLiteral).flatten
-      }
-      .flatten
-    
-    val zeroRefs = zeroReferences.getOrElse(key, (0L, 0L))
-    zeroReferences.update(key, (
-      zeroRefs._1 + iris.count(_.prefixId == 0),
-      zeroRefs._2 + iris.count(_.nameId == 0),
-    ))
-    val nonZeroRefs = nonZeroReferences.getOrElse(key, (0L, 0L))
-    nonZeroReferences.update(key, (
-      nonZeroRefs._1 + iris.count(_.prefixId != 0),
-      nonZeroRefs._2 + iris.count(_.nameId != 0),
-    ))
-
-    val messages: Seq[(String, Seq[GeneratedMessage])] = Seq(
-      "RdfStreamFrame" -> Seq(frame),
-      "RdfStreamRow" -> frame.rows,
-      "RdfTriple" -> frame.rows.flatMap(_.row.triple),
-      "RdfQuad" -> frame.rows.flatMap(_.row.quad),
-      "RdfGraphStart" -> frame.rows.flatMap(_.row.graphStart),
-      "RdfGraphEnd" -> frame.rows.flatMap(_.row.graphEnd),
-      "RdfNameEntry" -> frame.rows.flatMap(_.row.name),
-      "RdfPrefixEntry" -> frame.rows.flatMap(_.row.prefix),
-      "RdfDatatypeEntry" -> frame.rows.flatMap(_.row.datatype),
-      "RdfIri" -> iris,
-      "RdfLiteral" -> literals,
-    )
-    
-    for (name, messages) <- messages do
-      val mStats = ProtoMessageStats.getOrElse(name, (0L, 0L))
-      ProtoMessageStats.update(
-        name, 
-        (
-          mStats._1 + messages.size, 
-          mStats._2 + messages.map(_.serializedSize).sum
-        )
-      )
+      catch
+        case e: Exception =>
+          println(s"Error in experiment $experiment: $e")
+          e.printStackTrace()
+          System.gc()
+          Thread.sleep(1000)

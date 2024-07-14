@@ -22,7 +22,7 @@ object Experiments:
     Random.shuffle(keys.result())
   
   def getJenaFormat(exp: String, streamType: String): Option[RDFFormat] =
-    val tuple = Constants.jenaFormats(exp)
+    val tuple = Constants.jenaFormats.getOrElse(exp, Constants.jenaStreamFormats(exp))
     if streamType == "triples" then Some(tuple(0)) else tuple(1)
 
   def getJellyOpts(exp: String, streamType: String, grouped: Boolean): RdfStreamOptions =

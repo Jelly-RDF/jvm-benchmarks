@@ -15,8 +15,8 @@ trait GroupedSerDes extends SerDes:
   protected var numStatements: Long = _
   protected var sourceData: GroupedData = _
 
-  protected final def loadData(path: String, streamType: String, elementSize: Int): Unit =
-    val d = DataLoader.getSourceData(path, streamType, elementSize)
+  protected final def loadData(path: String, streamType: String, elementSize: Int, elements: Option[Int]): Unit =
+    val d = DataLoader.getSourceData(path, streamType, elementSize, elements)
     numStatements = d._1
     numElements = d._2
     sourceData = d._3

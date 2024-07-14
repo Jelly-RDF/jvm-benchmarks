@@ -44,12 +44,13 @@ object GrpcLatencyBench extends Grpc:
   /**
    * @param gzip Whether to use gzip compression
    * @param streamType The type of stream to use (triples, graphs, quads)
+   * @param elements The number of elements to process or 0 to process all
    * @param sourceFilePath The path to the source file
    */
   @main
-  def runGrpcLatencyBench(gzip: Boolean, streamType: String, sourceFilePath: String): Unit =
+  def runGrpcLatencyBench(gzip: Boolean, streamType: String, elements: Int, sourceFilePath: String): Unit =
     initExperiments(streamType)
-    loadData(sourceFilePath, streamType)
+    loadData(sourceFilePath, streamType, elements)
 
     val resultMap: Map[String, mutable.Map[String, Seq[(Long, Long)]]] = experiments
       .map(_ -> mutable.Map[String, Seq[(Long, Long)]]()).toMap

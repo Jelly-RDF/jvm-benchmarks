@@ -12,8 +12,8 @@ trait FlatSerDes extends SerDes:
   protected var numStatements: Long = _
   protected var sourceData: FlatData = _
 
-  protected final def loadData(path: String, streamType: String): Unit =
-    val d = DataLoader.getSourceDataJellyFlat(path, streamType)
+  protected final def loadData(path: String, streamType: String, statements: Int): Unit =
+    val d = DataLoader.getSourceDataJellyFlat(path, streamType, if statements == 0 then None else Some(statements))
     numStatements = d.fold(identity, identity).size
     sourceData = d
 

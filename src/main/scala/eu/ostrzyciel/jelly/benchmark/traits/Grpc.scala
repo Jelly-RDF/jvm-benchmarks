@@ -25,8 +25,10 @@ trait Grpc:
     )
     this.streamType = streamType
 
-  protected final def loadData(path: String, streamType: String): Unit =
-    val d = DataLoader.getSourceData(path, streamType, 0)(using serverSystem)
+  protected final def loadData(path: String, streamType: String, elements: Int): Unit =
+    val d = DataLoader.getSourceData(
+      path, streamType, 0, if elements == 0 then None else Some(elements)
+    )(using serverSystem)
     numStatements = d._1
     numElements = d._2
     sourceData = d._3

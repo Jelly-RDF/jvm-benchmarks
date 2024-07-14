@@ -29,15 +29,16 @@ object GrpcThroughputBench extends Grpc:
   /**
    * @param gzip Whether to use gzip compression
    * @param streamType The type of stream to use (triples, graphs, quads)
+   * @param elements The number of elements to process or 0 to process all
    * @param sourceFilePath The path to the source file
    */
   @main
-  def runGrpcThroughputBench(gzip: Boolean, streamType: String, sourceFilePath: String): Unit =
+  def runGrpcThroughputBench(gzip: Boolean, streamType: String, elements: Int, sourceFilePath: String): Unit =
     given ActorSystem[_] = serverSystem
     given ExecutionContext = serverSystem.executionContext
 
     initExperiments(streamType)
-    loadData(sourceFilePath, streamType)
+    loadData(sourceFilePath, streamType, elements)
 
     println("Starting server...")
     val serverOptions = RdfStreamServer.Options(

@@ -31,9 +31,12 @@ object ConfigManager:
     .toSeq
   
   object enabledFormats:
-    val jena: Seq[String] = config.getStringList("jelly.enabled-formats.jena").asScala.toSeq
-      .map(_.prependedAll("jena-"))
-    val jenaStreaming: Seq[String] = config.getStringList("jelly.enabled-formats.jena-streaming").asScala.toSeq
-      .map(_.prependedAll("jena-"))
-    val jelly: Seq[String] = config.getStringList("jelly.enabled-formats.jelly").asScala.toSeq
-      .map(_.prependedAll("jelly-"))
+    val jena: Seq[String] = config.getString("jelly.enabled-formats.jena")
+      .split(',')
+      .map(_.trim.prependedAll("jena-"))
+    val jenaStreaming: Seq[String] = config.getString("jelly.enabled-formats.jena-streaming")
+      .split(',')
+      .map(_.trim.prependedAll("jena-"))
+    val jelly: Seq[String] = config.getString("jelly.enabled-formats.jelly")
+      .split(',')
+      .map(_.trim.prependedAll("jelly-"))

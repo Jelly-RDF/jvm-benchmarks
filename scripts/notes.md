@@ -11,7 +11,7 @@
 
 ## Network emulation (end-to-end tests)
 
-### Enable netem
+### Enable netem (needs root privileges)
 ```
 ./set_netem.sh 10 100 9093 8421 2
 ./set_netem.sh 15 50 9094 8422 3

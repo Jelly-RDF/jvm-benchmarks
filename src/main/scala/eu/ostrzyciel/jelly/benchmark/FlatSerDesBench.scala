@@ -2,8 +2,9 @@ package eu.ostrzyciel.jelly.benchmark
 
 import eu.ostrzyciel.jelly.benchmark.traits.FlatSerDes
 import eu.ostrzyciel.jelly.benchmark.util.{ConfigManager, Experiments}
+import org.apache.commons.io.output.ByteArrayOutputStream
 
-import java.io.{ByteArrayInputStream, ByteArrayOutputStream, OutputStream}
+import java.io.OutputStream
 import scala.collection.mutable
 import scala.collection.mutable.ArrayBuffer
 
@@ -52,7 +53,7 @@ object FlatSerDesBench extends FlatSerDes:
 
 
   private def mainSer(jellyFrameSize: Int): Unit =
-    for i <- 1 to ConfigManager.benchmarkRepeats; experiment <- experiments do
+    for experiment <- experiments; i <- 1 to ConfigManager.benchmarkRepeats do
       System.gc()
       println("Sleeping 3 seconds...")
       Thread.sleep(3000)
@@ -84,18 +85,24 @@ object FlatSerDesBench extends FlatSerDes:
       try {
 
         val serialized = if experiment.startsWith("jelly") then
-          // Keep the buffer withing this code block to deallocate it after we finish serializing
+          // Use Apache Commons implementation of ByteArrayOutputStream to avoid additional buffer copying.
+          // Note that this implementation is still limited to Int.MaxValue bytes.
+          // This would fail for example with jena-nt, 10M quads, assist-iot-weather-graphs.
+          // It's safer to limit the number of statements to 5M.
           val outputStream = new ByteArrayOutputStream()
           serJelly(
             getJellyOpts(experiment, streamType, grouped = false),
             _.writeDelimitedTo(outputStream),
             jellyFrameSize,
           )
-          outputStream.toByteArray
+          outputStream
         else
           val outputStream = new ByteArrayOutputStream()
           serJena(getJenaFormat(experiment, streamType).get, outputStream)
-          outputStream.toByteArray
+          outputStream
+
+        if serialized.size() <= 0 then
+          throw new Exception("Serialization failed -- buffer size is larger than Int.MaxValue")
 
         for i <- 1 to ConfigManager.benchmarkRepeats do
           System.gc()
@@ -104,12 +111,12 @@ object FlatSerDesBench extends FlatSerDes:
           println(f"Try: $i, experiment: $experiment")
           if experiment.startsWith("jelly") then
             times(experiment) += time {
-              desJelly(new ByteArrayInputStream(serialized), streamType)
+              desJelly(serialized.toInputStream, streamType)
             }
           else
             times(experiment) += time {
               desJena(
-                new ByteArrayInputStream(serialized),
+                serialized.toInputStream,
                 getJenaFormat(experiment, streamType).get,
                 streamType
               )

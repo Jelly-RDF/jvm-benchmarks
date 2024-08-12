@@ -51,7 +51,10 @@ object GroupedSerDesBench extends GroupedSerDes:
     
 
   private def mainSer(): Unit =
-    for i <- 1 to ConfigManager.benchmarkRepeats; experiment <- experiments do
+    for
+      experiment <- experiments  
+      i <- 1 to ConfigManager.benchmarkRepeats 
+    do
       System.gc()
       println("Sleeping 3 seconds...")
       Thread.sleep(3000)

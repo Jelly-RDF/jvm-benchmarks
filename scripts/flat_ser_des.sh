@@ -3,13 +3,11 @@
 set -eux
 
 JAVA_EXEC=$1
-CP="$2 eu.ostrzyciel.jelly.benchmark.FlatSerDesBench"
+CP="$2 eu.ostrzyciel.jelly.benchmark.runFlatSerDesBench"
 BASE_DATA=$3
-ELEMENT_SIZE=$4
 
 JAVA_OPTS="-Xms1G -Xmx32G"
 
-TASKS="ser des"
 DATASETS=(
   "triples assist-iot-weather"
   "quads assist-iot-weather-graphs"
@@ -21,16 +19,16 @@ DATASETS=(
   "triples lod-katrina"
   "triples muziekweb"
   "quads nanopubs"
+  "triples openaire-lod"
   "triples politiquices"
   "triples yago-annotated-facts"
 )
 
 for dataset in "${DATASETS[@]}"
 do
-  for task in $TASKS
-  do
-    IFS=" " read -r -a ds <<< "$dataset"
-    echo "Running $task for ${ds[0]} ${ds[1]}, element size: $ELEMENT_SIZE"
-    $JAVA_EXEC $JAVA_OPTS -Djelly.debug.output-dir=./result/ -cp $CP "$task" "$ELEMENT_SIZE" "${ds[0]}" "$BASE_DATA/${ds[1]}.jelly.gz"
-  done
+  IFS=" " read -r -a ds <<< "$dataset"
+  echo "Running flat raw ser/des for ${ds[0]} ${ds[1]}"
+  # Run with 5 million statements
+  $JAVA_EXEC $JAVA_OPTS -Djelly.benchmark.output-dir=./result/flat_ser_des/ \
+    -cp $CP "ser,des" "${ds[0]}" 512 5000000 "$BASE_DATA/${ds[1]}.jelly.gz"
 done

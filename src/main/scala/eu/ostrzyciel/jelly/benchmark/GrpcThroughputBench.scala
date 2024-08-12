@@ -1,6 +1,6 @@
 package eu.ostrzyciel.jelly.benchmark
 
-import eu.ostrzyciel.jelly.benchmark.traits.Grpc
+import eu.ostrzyciel.jelly.benchmark.traits.Networked
 import eu.ostrzyciel.jelly.benchmark.util.*
 import eu.ostrzyciel.jelly.core.proto.v1.*
 import eu.ostrzyciel.jelly.grpc.RdfStreamServer
@@ -14,7 +14,7 @@ import scala.collection.mutable.ArrayBuffer
 import scala.concurrent.duration.*
 import scala.concurrent.{Await, ExecutionContext, Future}
 
-object GrpcThroughputBench extends Grpc:
+object GrpcThroughputBench extends Networked:
   import eu.ostrzyciel.jelly.benchmark.util.Experiments.*
   import eu.ostrzyciel.jelly.benchmark.util.Util.*
   import eu.ostrzyciel.jelly.convert.jena.given
@@ -37,7 +37,7 @@ object GrpcThroughputBench extends Grpc:
     given ActorSystem[_] = serverSystem
     given ExecutionContext = serverSystem.executionContext
 
-    initExperiments(streamType)
+    initExperiments(streamType, useJena = false)
     loadData(sourceFilePath, streamType, elements)
     val filler = () => experiments.map(_ -> ArrayBuffer[Long]()).toMap
     t0client = filler()
@@ -69,7 +69,7 @@ object GrpcThroughputBench extends Grpc:
     val settings = GrpcClientSettings.fromConfig("jelly-rdf-client")
     val client = RdfStreamServiceClient(settings)
 
-    for i <- 1 to ConfigManager.benchmarkNetworkRepeats; expName <- experiments do
+    for expName <- experiments; i <- 1 to ConfigManager.benchmarkNetworkRepeats do
       println(s"Experiment $expName try: $i")
       Await.result(
         request(client, getJellyOpts(expName, streamType, grouped = true), expName),
@@ -125,8 +125,3 @@ object GrpcThroughputBench extends Grpc:
       val thing = if opt.physicalType.isGraphs then "graphs" else "statements"
       println(s"Streaming done, elements: $elements $thing: $statements")
     }
-
-  private def countSink[T]: Sink[IterableOnce[T], Future[(Long, Long)]] =
-    Sink.fold((0L, 0L))((counter, els) =>
-      (counter._1 + els.iterator.size, counter._2 + 1)
-    )

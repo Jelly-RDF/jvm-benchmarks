@@ -59,6 +59,33 @@ trait GroupedSerDes extends SerDes:
             })
             .foreach(closure)
 
+  protected final def serJellyOneElement(
+    element: Model | DatasetGraph, encoder: JenaProtoEncoder, closure: RdfStreamFrame => Unit
+  ): Unit =
+    element match
+      case m: Model =>
+        // TRIPLES
+        val rows = m.asTriples
+          .flatMap(triple => encoder.addTripleStatement(triple))
+          .toSeq
+        closure(RdfStreamFrame(rows))
+      case ds: DatasetGraph =>
+        if encoder.options.physicalType.isGraphs then
+          // GRAPHS
+          val rows = ds.asGraphs.flatMap(params => {
+            val (g, triples) = params
+            encoder.startGraph(g) ++
+              triples.flatMap(triple => encoder.addTripleStatement(triple)) ++
+              encoder.endGraph()
+          }).toSeq
+          closure(RdfStreamFrame(rows))
+        else
+          // QUADS
+          val rows = ds.asQuads
+            .flatMap(quad => encoder.addQuadStatement(quad))
+            .toSeq
+          closure(RdfStreamFrame(rows))
+
   protected final def serJena(sourceData: Model | DatasetGraph, format: RDFFormat, outputStream: OutputStream): Unit =
     val writer = RDFWriter.create().format(format)
     sourceData match

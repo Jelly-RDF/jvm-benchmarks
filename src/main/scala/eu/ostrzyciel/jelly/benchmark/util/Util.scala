@@ -37,7 +37,6 @@ object Util:
 
     val filename = ConfigManager.benchmarkOutputDir +
       name + "_" + System.currentTimeMillis() / 1000 + ".json"
-    Files.writeString(
-      Paths.get(filename),
-      Serialization.write(results)
-    )
+    val path = Paths.get(filename)
+    path.getParent.toFile.mkdirs()
+    Files.writeString(path, Serialization.write(results))

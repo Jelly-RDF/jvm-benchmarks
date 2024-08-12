@@ -3,7 +3,7 @@
 set -eux
 
 JAVA_EXEC=$1
-CP="$2 eu.ostrzyciel.jelly.benchmark.SizeBench"
+CP="$2 eu.ostrzyciel.jelly.benchmark.runSizeBench"
 BASE_DATA=$3
 
 JAVA_OPTS="-Xms1G -Xmx32G"
@@ -22,18 +22,16 @@ DATASETS=(
   "triples muziekweb"
   "quads nanopubs"
   "graphs nanopubs"
+  "triples openaire-lod"
   "triples politiquices"
   "triples yago-annotated-facts"
 )
-ELEMENTS="0 1024 4096"
 
 for dataset in "${DATASETS[@]}"
 do
-  for el in $ELEMENTS
-  do
-    IFS=" " read -r -a ds <<< "$dataset"
-    echo "Running element size $el for ${ds[0]} ${ds[1]}"
-    $JAVA_EXEC $JAVA_OPTS -Djelly.debug.output-dir=./result/size/ -cp $CP "${ds[0]}" "$el" "$BASE_DATA/${ds[1]}.jelly.gz"
-  done
+  IFS=" " read -r -a ds <<< "$dataset"
+  echo "Running size benchmark for ${ds[0]} ${ds[1]}"
+  $JAVA_EXEC $JAVA_OPTS -Djelly.benchmark.output-dir=./result/size/ \
+    -cp $CP "${ds[0]}" 0 0 "$BASE_DATA/${ds[1]}.jelly.gz"
 done
 

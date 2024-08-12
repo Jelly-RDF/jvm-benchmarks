@@ -1,7 +1,7 @@
 package eu.ostrzyciel.jelly.benchmark
 
 import eu.ostrzyciel.jelly.benchmark.GrpcThroughputBench.initExperiments
-import eu.ostrzyciel.jelly.benchmark.traits.Grpc
+import eu.ostrzyciel.jelly.benchmark.traits.Networked
 import eu.ostrzyciel.jelly.benchmark.util.*
 import eu.ostrzyciel.jelly.benchmark.util.ConfigManager.LatencyCase
 import eu.ostrzyciel.jelly.core.proto.v1.*
@@ -16,7 +16,7 @@ import scala.collection.mutable
 import scala.concurrent.duration.*
 import scala.concurrent.{Await, Future}
 
-object GrpcLatencyBench extends Grpc:
+object GrpcLatencyBench extends Networked:
   import eu.ostrzyciel.jelly.benchmark.util.Experiments.*
   import eu.ostrzyciel.jelly.benchmark.util.Util.*
   import eu.ostrzyciel.jelly.convert.jena.given
@@ -28,7 +28,7 @@ object GrpcLatencyBench extends Grpc:
    */
   @main
   def runGrpcLatencyBench(gzip: Boolean, streamType: String, sourceFilePath: String): Unit =
-    initExperiments(streamType)
+    initExperiments(streamType, useJena = false)
     loadData(sourceFilePath, streamType, ConfigManager.benchmarkLatencyCases.map(_._1).max)
 
     val resultMap: Map[String, mutable.Map[String, Seq[(Long, Long)]]] = experiments

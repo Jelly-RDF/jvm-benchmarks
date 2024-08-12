@@ -19,6 +19,7 @@ object LatencyUtil:
       val key = if latencyCase.interval.isDefined then
         s"${latencyCase.interval.get.toMicros / 1000f} ms, burst ${latencyCase.burst.getOrElse(1)}, $run"
       else s"unconstrained, burst ${latencyCase.burst.getOrElse(1)}, $run"
+      System.gc()
       println("Sleeping 3 seconds...")
       Thread.sleep(3000)
       println()

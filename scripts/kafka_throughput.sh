@@ -3,13 +3,13 @@
 set -eux
 
 JAVA_EXEC=$1
-CP="$2 eu.ostrzyciel.jelly.benchmark.GrpcStreamBench"
+CP="$2 eu.ostrzyciel.jelly.benchmark.runKafkaThroughputBench"
 BASE_DATA=$3
 PORT=$4
 
 JAVA_OPTS="-Xms1G -Xmx32G"
 
-GZIP_OPTS="0 1"
+GZIP_OPTS="false true"
 DATASETS=(
   "triples assist-iot-weather"
   "quads assist-iot-weather-graphs"
@@ -24,23 +24,21 @@ DATASETS=(
   "triples muziekweb"
   "quads nanopubs"
   "graphs nanopubs"
+  "triples openaire-lod"
   "triples politiquices"
   "triples yago-annotated-facts"
 )
-ELEMENTS="0 1024 4096"
 
 for dataset in "${DATASETS[@]}"
 do
   for gzip_opt in $GZIP_OPTS
   do
-    for el in $ELEMENTS
-    do
-      IFS=" " read -r -a ds <<< "$dataset"
-      echo "Running element size $el gzip $gzip_opt for ${ds[0]} ${ds[1]}"
-      $JAVA_EXEC $JAVA_OPTS \
-        -Djelly.debug.output-dir=./result/grpc_stream/ \
-        -Dpekko.grpc.client.jelly-rdf-client.port=$PORT \
-        -cp $CP "$gzip_opt" "${ds[0]}" "$el" "$BASE_DATA/${ds[1]}.jelly.gz"
-    done
+    IFS=" " read -r -a ds <<< "$dataset"
+    echo "Running gzip $gzip_opt for ${ds[0]} ${ds[1]}"
+    $JAVA_EXEC $JAVA_OPTS \
+      -Djelly.benchmark.output-dir=./result/kafka_throughput/ \
+      -Dpekko.kafka.producer.kafka-clients.bootstrap.servers="127.0.0.1:$PORT" \
+      -Dpekko.kafka.consumer.kafka-clients.bootstrap.servers="127.0.0.1:$PORT" \
+      -cp $CP "$gzip_opt" "${ds[0]}" 10000 "$BASE_DATA/${ds[1]}.jelly.gz"
   done
 done

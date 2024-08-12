@@ -3,7 +3,7 @@ ThisBuild / scalaVersion := "3.3.0"
 resolvers +=
   "Sonatype OSS Snapshots" at "https://s01.oss.sonatype.org/content/repositories/snapshots"
 
-val jellyV = "0.12.1+20-ec716e4e-SNAPSHOT"
+val jellyV = "0.13.0"
 // Jelly 0.x officially supports only Jena 4, but it works fine with Jena 5
 val jenaV = "5.0.0"
 

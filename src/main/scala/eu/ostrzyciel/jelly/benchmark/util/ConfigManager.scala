@@ -7,7 +7,7 @@ import scala.jdk.CollectionConverters.*
 import scala.jdk.DurationConverters.*
 
 object ConfigManager:
-  val config: Config = ConfigFactory.load("benchmark.conf").withFallback(ConfigFactory.load())
+  val config: Config = ConfigFactory.load()
   
   val benchmarkOutputDir: String = config.getString("jelly.benchmark.output-dir")
 

@@ -23,6 +23,16 @@ import scala.jdk.CollectionConverters.*
 trait Kafka extends Networked:
   import eu.ostrzyciel.jelly.benchmark.util.Experiments.*
   import eu.ostrzyciel.jelly.convert.jena.given
+  
+  // Dirty hack: we know that these tests always fail. In the Kafka setup, it's rather painful to
+  // abort the test midway, so we just skip them.
+  protected final val forbiddenCombinations = Set(
+    ("rdf-xml", "yago-annotated-facts"),
+    ("json-ld", "yago-annotated-facts")
+  )
+  
+  protected final def isForbiddenCombination(expName: String, dataset: String): Boolean =
+    forbiddenCombinations.exists((pExp, pDataset) => expName.contains(pExp) && dataset.contains(pDataset))
 
   protected final var useGzip: Boolean = _
 

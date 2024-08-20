@@ -39,19 +39,20 @@ object KafkaThroughputBench extends Kafka:
     useGzip = gzip
 
     for expName <- experiments; i <- 1 to ConfigManager.benchmarkNetworkRepeats do
-      println(s"Experiment $expName try: $i")
-      times(expName) += Await.result(
-        runTest(expName) recover {
-          case e =>
-            println(s"Error in experiment $expName: $e")
-            e.printStackTrace() ; KafkaResult(-1, -1, -1, -1, -1)
-        },
-        Duration.Inf
-      )
-      System.gc()
-      recreateTopic()
-      println("Sleeping 5 seconds...")
-      Thread.sleep(5000)
+      if !isForbiddenCombination(expName, sourceFilePath) then
+        println(s"Experiment $expName try: $i")
+        times(expName) += Await.result(
+          runTest(expName) recover {
+            case e =>
+              println(s"Error in experiment $expName: $e")
+              e.printStackTrace() ; KafkaResult(-1, -1, -1, -1, -1)
+          },
+          Duration.Inf
+        )
+        System.gc()
+        recreateTopic()
+        println("Sleeping 5 seconds...")
+        Thread.sleep(5000)
 
     saveRunInfo("kafka_throughput", Map(
       "times" -> times,
@@ -122,8 +123,16 @@ object KafkaThroughputBench extends Kafka:
         elements.iterator.foreach(_ => ())
       })
       .take(numElements)
+      .completionTimeout(20.minutes)
       .run()
-    consumerFuture map { _ => totalSize }
+    consumerFuture map {
+      _ => totalSize
+    } recover {
+      case e =>
+        println(s"Error in consumer: $e")
+        e.printStackTrace()
+        -1
+    }
 
   private def runProducer(serializer: Flow[ModelOrDataset, Array[Byte], NotUsed],
                           settings: ProducerSettings[String, Array[Byte]])(using system: ActorSystem[Nothing]):
@@ -133,4 +142,5 @@ object KafkaThroughputBench extends Kafka:
     Source[ModelOrDataset](sourceData.fold(identity, identity))
       .via(serializer)
       .map(bytes => new ProducerRecord[String, Array[Byte]]("rdf", bytes))
+      // .recover()
       .runWith(kafkaProd)

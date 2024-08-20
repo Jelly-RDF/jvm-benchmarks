@@ -36,21 +36,22 @@ object KafkaLatencyBench extends Kafka:
     useGzip = gzip
 
     for expName <- experiments do
-      println("\n" + "=" * 80 + "\n")
-      println(s"Running experiment $expName")
-
-      LatencyUtil.run(
-        c => {
-          val runFuture = runOne(c, expName)
-            .recover { case e =>
-              println(s"Error in experiment $expName: $e")
-              e.printStackTrace()
-              Seq()
-            }
-          Await.result(runFuture, Duration.Inf)
-        },
-        resultMap(expName)
-      )
+      if !isForbiddenCombination(expName, sourceFilePath) then
+        println("\n" + "=" * 80 + "\n")
+        println(s"Running experiment $expName")
+  
+        LatencyUtil.run(
+          c => {
+            val runFuture = runOne(c, expName)
+              .recover { case e =>
+                println(s"Error in experiment $expName: $e")
+                e.printStackTrace()
+                Seq()
+              }
+            Await.result(runFuture, Duration.Inf)
+          },
+          resultMap(expName)
+        )
 
     saveRunInfo("kafka_latency", Map(
       "times" -> resultMap,
@@ -101,7 +102,7 @@ object KafkaLatencyBench extends Kafka:
         new TopicPartition("rdf", 0) -> (System.currentTimeMillis - 100)
       )
     )
-    kafkaCons
+    val f = kafkaCons
       .map(cr => cr.value())
       .via(deserializer)
       .map(elements => {
@@ -110,7 +111,14 @@ object KafkaLatencyBench extends Kafka:
         times.append(System.nanoTime())
       })
       .take(latencyCase.messages)
+      .completionTimeout(30.minutes)
       .run()
+    f recover {
+      case e =>
+        println(s"Error in consumer: $e")
+        e.printStackTrace()
+        Done
+    }
 
   private def runProducer(serializer: Flow[ModelOrDataset, Array[Byte], NotUsed],
                           settings: ProducerSettings[String, Array[Byte]], times: mutable.ArrayBuffer[Long],

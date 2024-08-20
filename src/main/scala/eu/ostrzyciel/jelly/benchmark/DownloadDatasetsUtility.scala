@@ -13,7 +13,9 @@ import org.apache.pekko.http.scaladsl.model.*
 import org.apache.pekko.http.scaladsl.model.headers.{Accept, Location}
 import org.apache.pekko.stream.scaladsl.{FileIO, Sink, StreamConverters}
 
+import java.io.FileInputStream
 import java.nio.file.Path
+import java.security.MessageDigest
 import scala.concurrent.{ExecutionContext, Future}
 import scala.jdk.CollectionConverters.*
 
@@ -25,6 +27,13 @@ object DownloadDatasetsUtility:
 
   val rbBase = "https://w3id.org/riverbench"
   val mediaJelly = MediaRange(MediaType.applicationBinary("x-jelly-rdf", MediaType.Compressible))
+
+  private val m = ModelFactory.createDefaultModel;
+  private val spdxNs = "http://spdx.org/rdf/terms#"
+  private val spdxChecksum = m.createProperty(spdxNs, "checksum")
+  private val spdxAlgorithm = m.createProperty(spdxNs, "algorithm")
+  private val spdxMd5 = m.createResource(spdxNs + "checksumAlgorithm_md5")
+  private val spdxChecksumValue = m.createProperty(spdxNs, "checksumValue")
 
   /**
    * Downloads datasets from RiverBench, in gzipped Jelly format.
@@ -53,18 +62,30 @@ object DownloadDatasetsUtility:
             })
           (
             datasetIri.split('/').dropRight(1).last,
-            datasetM.listObjectsOfProperty(distribution, DCAT.downloadURL).next.asResource.getURI
+            datasetM.listObjectsOfProperty(distribution, DCAT.downloadURL).next.asResource.getURI,
+            datasetM.listObjectsOfProperty(distribution, spdxChecksum).asScala
+              .filter(_.asResource().hasProperty(spdxAlgorithm, spdxMd5))
+              .map(_.asResource().getProperty(spdxChecksumValue).getString)
+              .next
           )
       } map { downloadLinks =>
         val outputPath = Path.of(outputDir)
         outputPath.toFile.mkdirs()
-        for (name, url) <- downloadLinks yield
+        for (name, url, checksum) <- downloadLinks yield
           val path = outputPath.resolve(f"$name.jelly.gz")
-          getWithFollowRedirects(url, None) flatMap { response =>
-            println(f"Got reponse ${response.status} for $name -- saving to $path")
-            response.entity.dataBytes
-              .runWith(FileIO.toPath(path))
-              .map(_ => println(s"Downloaded $name"))
+          val future = if !path.toFile.exists() then
+            getWithFollowRedirects(url, None) flatMap { response =>
+              println(f"Got response ${response.status} for $name -- saving to $path")
+              response.entity.dataBytes
+                .runWith(FileIO.toPath(path))
+                .map(_ => println(s"Downloaded $name"))
+            }
+          else Future { println(f"Skipping $name, already downloaded") }
+          future map { _ =>
+            if !verifyMd5(path, checksum) then
+              println(f"\n\n!!! Checksum mismatch for $name !!!")
+              println("Remove this dataset and re-run the utility to download it again\n\n")
+            else println(f"Checksum verified for $name")
           }
       } map { saveFutures =>
         Future.sequence(saveFutures) map { _ =>
@@ -73,6 +94,17 @@ object DownloadDatasetsUtility:
         }
       }
     }
+
+  def verifyMd5(path: Path, md5: String): Boolean =
+    val md = MessageDigest.getInstance("MD5")
+    val is = FileInputStream(path.toFile)
+    val buffer = new Array[Byte](8192)
+    var read = 0
+    while { read = is.read(buffer); read != -1 } do
+      md.update(buffer, 0, read)
+    val digest = md.digest()
+    val digestStr = digest.map(b => f"$b%02x").mkString
+    digestStr == md5
 
   def getMetadata(url: String): Future[Model] =
     println(s"Downloading metadata from $url")

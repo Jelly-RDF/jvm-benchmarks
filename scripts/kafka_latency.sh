@@ -3,7 +3,7 @@
 set -eux
 
 JAVA_EXEC=$1
-CP="$2 eu.ostrzyciel.jelly.benchmark.runGrpcLatencyBench"
+CP="$2 eu.ostrzyciel.jelly.benchmark.runKafkaLatencyBench"
 BASE_DATA=$3
 PORT=$4
 

@@ -39,7 +39,7 @@ The script will download the datasets as `.jelly.gz` files.
 
 The `scripts` directory contains scripts that automate running the benchmarks.
 
-The scripts assume you are using the `stream-mixed` profile of RiverBench – if you are using a different profile, you will need to modify the `DATASETS` variable in the scripts accordingly. Same goes for any changes to benchmark parameters.
+The scripts assume you are using the `stream-mixed-rdfstar` profile of RiverBench – if you are using a different profile, you will need to modify the `DATASETS` variable in the scripts accordingly. Same goes for any changes to benchmark parameters.
 
 - `./scripts/size.sh [path-to-java-executable] [path-to-benchmark-jar] [directory-with-datasets]`
   - Runs the serialization size benchmark.

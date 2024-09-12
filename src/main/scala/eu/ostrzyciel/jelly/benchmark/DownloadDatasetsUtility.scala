@@ -1,17 +1,15 @@
 package eu.ostrzyciel.jelly.benchmark
 
 import eu.ostrzyciel.jelly.convert.jena.riot.JellyLanguage
-import eu.ostrzyciel.jelly.stream.{DecoderFlow, JellyIo}
 import org.apache.jena.rdf.model.{Model, ModelFactory}
 import org.apache.jena.riot.RDFDataMgr
-import org.apache.jena.sparql.graph.GraphFactory
 import org.apache.jena.vocabulary.{DCAT, DCTerms}
 import org.apache.pekko.actor.typed.ActorSystem
 import org.apache.pekko.actor.typed.scaladsl.Behaviors
 import org.apache.pekko.http.scaladsl.Http
 import org.apache.pekko.http.scaladsl.model.*
 import org.apache.pekko.http.scaladsl.model.headers.{Accept, Location}
-import org.apache.pekko.stream.scaladsl.{FileIO, Sink, StreamConverters}
+import org.apache.pekko.stream.scaladsl.{FileIO, StreamConverters}
 
 import java.io.FileInputStream
 import java.nio.file.Path
@@ -20,7 +18,6 @@ import scala.concurrent.{ExecutionContext, Future}
 import scala.jdk.CollectionConverters.*
 
 object DownloadDatasetsUtility:
-  import eu.ostrzyciel.jelly.convert.jena.given
 
   given as: ActorSystem[_] = ActorSystem[Nothing](Behaviors.empty, "DownloadDatasetsUtility")
   given ExecutionContext = as.executionContext

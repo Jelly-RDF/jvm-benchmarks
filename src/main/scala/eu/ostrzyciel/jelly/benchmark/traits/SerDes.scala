@@ -1,8 +1,8 @@
 package eu.ostrzyciel.jelly.benchmark.traits
 
 import eu.ostrzyciel.jelly.benchmark.util.*
-import org.apache.jena.riot.RDFFormat
-import org.apache.jena.riot.system.AsyncParser
+import org.apache.jena.riot.system.StreamRDFLib
+import org.apache.jena.riot.{RDFFormat, RDFParser}
 import org.apache.pekko.actor.typed.ActorSystem
 import org.apache.pekko.actor.typed.scaladsl.Behaviors
 
@@ -37,7 +37,5 @@ trait SerDes:
    * This is the same for grouped and flat benchmarks. In Jena all parsers have a
    * statement-level streaming interface.
    */
-  protected final def desJena(input: InputStream, format: RDFFormat, streamType: String): Unit = (
-    if streamType == "triples" then AsyncParser.asyncParseTriples(input, format.getLang, "")
-    else AsyncParser.asyncParseQuads(input, format.getLang, "")
-  ).forEachRemaining(_ => {})
+  protected final def desJena(input: InputStream, format: RDFFormat, streamType: String): Unit =
+    RDFParser.source(input).lang(format.getLang).parse(StreamRDFLib.sinkNull())

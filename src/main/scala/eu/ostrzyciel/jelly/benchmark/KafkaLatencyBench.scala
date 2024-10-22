@@ -91,7 +91,7 @@ object KafkaLatencyBench extends Kafka:
     yield
       tsProducer.lazyZip(tsConsumer).toSeq
 
-  private def runConsumer(deserializer: Flow[Array[Byte], IterableOnce[TripleOrQuad], NotUsed],
+  private def runConsumer(deserializer: Flow[Array[Byte], Unit, NotUsed],
                           settings: ConsumerSettings[String, Array[Byte]], times: mutable.ArrayBuffer[Long],
                           latencyCase: LatencyCase)(using system: ActorSystem[Nothing]):
   Future[Done] =
@@ -105,9 +105,7 @@ object KafkaLatencyBench extends Kafka:
     val f = kafkaCons
       .map(cr => cr.value())
       .via(deserializer)
-      .map(elements => {
-        // Enumerate the statements to make sure they are all deserialized
-        elements.iterator.foreach(_ => ())
+      .map(_ => {
         times.append(System.nanoTime())
       })
       .take(latencyCase.messages)

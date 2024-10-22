@@ -18,7 +18,7 @@ lazy val root = (project in file("."))
       "org.json4s" %% "json4s-jackson" % "4.0.7",
       "org.apache.jena" % "jena-core" % jenaV,
       "org.apache.jena" % "jena-arq" % jenaV,
-      "org.apache.pekko" %% "pekko-connectors-kafka" % "1.0.0"
+      "org.apache.pekko" %% "pekko-connectors-kafka" % "1.0.0",
     ),
     assembly / assemblyMergeStrategy := {
       case PathList("module-info.class") => MergeStrategy.discard

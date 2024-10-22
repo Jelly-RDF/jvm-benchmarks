@@ -5,8 +5,8 @@ import eu.ostrzyciel.jelly.benchmark.util.*
 import eu.ostrzyciel.jelly.core.proto.v1.*
 import eu.ostrzyciel.jelly.stream.{DecoderFlow, EncoderFlow}
 import org.apache.jena.rdf.model.Model
-import org.apache.jena.riot.RDFWriter
-import org.apache.jena.riot.system.AsyncParser
+import org.apache.jena.riot.{RDFParser, RDFWriter}
+import org.apache.jena.riot.system.{AsyncParser, StreamRDFLib}
 import org.apache.jena.sparql.core.DatasetGraph
 import org.apache.kafka.clients.admin.{Admin, NewTopic}
 import org.apache.kafka.clients.consumer.ConsumerConfig
@@ -89,7 +89,7 @@ trait Kafka extends Networked:
           bos.toByteArray
         })
 
-  protected final def getDeserializer(experiment: String): Flow[Array[Byte], IterableOnce[TripleOrQuad], NotUsed] =
+  protected final def getDeserializer(experiment: String): Flow[Array[Byte], Unit, NotUsed] =
     def inputStream(bytes: Array[Byte]): InputStream =
       var is: InputStream = new ByteArrayInputStream(bytes)
       if useGzip then
@@ -104,10 +104,16 @@ trait Kafka extends Networked:
       Flow[Array[Byte]]
         .map(bytes => RdfStreamFrame.parseFrom(inputStream(bytes)))
         .via(decoder)
+        .map(statements => {
+          // We need to enumerate the statements to actually read the data
+          statements.iterator.foreach(_ => ())
+        })
     else
       val jenaLang = getJenaFormat(experiment, streamType).get.getLang
       Flow[Array[Byte]]
-        .map(bytes => AsyncParser.asyncParseTriples(inputStream(bytes), jenaLang, "").asScala)
+        .map(bytes => {
+          RDFParser.source(inputStream(bytes)).lang(jenaLang).parse(StreamRDFLib.sinkNull())
+        })
 
   protected final def recreateTopic(): Unit =
     try {

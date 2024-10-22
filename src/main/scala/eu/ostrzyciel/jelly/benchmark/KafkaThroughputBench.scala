@@ -101,7 +101,7 @@ object KafkaThroughputBench extends Kafka:
     yield
       KafkaResult(t0cons, t0prod, t1cons, t1prod, bytesRec)
 
-  private def runConsumer(deserializer: Flow[Array[Byte], IterableOnce[TripleOrQuad], NotUsed],
+  private def runConsumer(deserializer: Flow[Array[Byte], Unit, NotUsed],
                           settings: ConsumerSettings[String, Array[Byte]])(using system: ActorSystem[Nothing]):
   Future[Long] =
     given ExecutionContext = system.executionContext
@@ -118,10 +118,6 @@ object KafkaThroughputBench extends Kafka:
         cr.value()
       })
       .via(deserializer)
-      .map(elements => {
-        // Enumerate the statements to make sure they are all deserialized
-        elements.iterator.foreach(_ => ())
-      })
       .take(numElements)
       .completionTimeout(20.minutes)
       .run()

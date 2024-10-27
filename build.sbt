@@ -1,11 +1,11 @@
-ThisBuild / scalaVersion := "3.3.0"
+ThisBuild / scalaVersion := "3.3.4"
 
-resolvers +=
-  "Sonatype OSS Snapshots" at "https://s01.oss.sonatype.org/content/repositories/snapshots"
+// Uncomment to use SNAPSHOT releases of Jelly
+//resolvers +=
+//  "Sonatype OSS Snapshots" at "https://s01.oss.sonatype.org/content/repositories/snapshots"
 
-val jellyV = "0.14.2"
-// Jelly 0.x officially supports only Jena 4, but it works fine with Jena 5
-val jenaV = "5.0.0"
+val jellyV = "2.2.1"
+val jenaV = "5.2.0"
 
 lazy val root = (project in file("."))
   .settings(
@@ -18,7 +18,7 @@ lazy val root = (project in file("."))
       "org.json4s" %% "json4s-jackson" % "4.0.7",
       "org.apache.jena" % "jena-core" % jenaV,
       "org.apache.jena" % "jena-arq" % jenaV,
-      "org.apache.pekko" %% "pekko-connectors-kafka" % "1.0.0",
+      "org.apache.pekko" %% "pekko-connectors-kafka" % "1.1.0",
     ),
     assembly / assemblyMergeStrategy := {
       case PathList("module-info.class") => MergeStrategy.discard

@@ -56,11 +56,11 @@ The scripts assume you are using the `stream-mixed-rdfstar` profile of RiverBenc
   - `[server-port]` is the port on which the gRPC server will listen and the gRPC client will connect to. If you want to use network emulation, set this to a port that you have configured in the network emulation script.
 - `./scripts/grpc_latency.sh [path-to-java-executable] [path-to-benchmark-jar] [directory-with-datasets] [server-port]`
   - Runs the end-to-end latency benchmark using gRPC.
-- `./scripts/kafka_throughput.sh [path-to-java-executable] [path-to-benchmark-jar] [directory-with-datasets] [kafka-broker-port]`
+- `./scripts/kafka_throughput.sh [path-to-java-executable] [path-to-benchmark-jar] [directory-with-datasets] [broker-port-for-producer] [broker-port-for-consumer]`
   - Runs the end-to-end throughput benchmark using Apache Kafka.
   - This script requires a running Kafka cluster. See the section on running Kafka below.
   - `[kafka-broker-port]` is the port on which the Kafka broker is listening. If you want to use network emulation, set this to a port that you have configured in the network emulation script.
-- `./scripts/kafka_latency.sh [path-to-java-executable] [path-to-benchmark-jar] [directory-with-datasets] [kafka-broker-port]`
+- `./scripts/kafka_latency.sh [path-to-java-executable] [path-to-benchmark-jar] [directory-with-datasets] [broker-port-for-producer] [broker-port-for-consumer]`
   - Runs the end-to-end latency benchmark using Apache Kafka.
   - This script requires a running Kafka cluster. See the section on running Kafka below. 
 

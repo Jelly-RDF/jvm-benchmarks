@@ -6,7 +6,7 @@ Benchmarks for Jelly-JVM using Apache Jena.
 
 ## Prerequisites
 
-You need at least Java 17 to compile the benchmark code. To run the benchmarks, we **strongly recommend** using the latest stable version a modern JDK, preferably GraalVM. In our benchmarks we used Oracle GraalVM 22.0.2+9.
+You need at least Java 17 to compile the benchmark code. To run the benchmarks, we **strongly recommend** using the latest stable version a modern JDK, preferably GraalVM. In our benchmarks we used Oracle GraalVM 23.0.1+11.1.
 
 This code was tested only on Linux. It may work on other platforms, but this wasn't tested.
 

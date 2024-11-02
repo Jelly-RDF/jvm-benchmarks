@@ -24,7 +24,6 @@ lazy val root = (project in file("."))
       "org.eclipse.rdf4j" % "rdf4j" % rdf4jV,
       "org.eclipse.rdf4j" % "rdf4j-rio-ntriples" % rdf4jV,
       "org.eclipse.rdf4j" % "rdf4j-rio-nquads" % rdf4jV,
-      "org.eclipse.rdf4j" % "rdf4j-rio-hdt" % rdf4jV,
       "org.eclipse.rdf4j" % "rdf4j-rio-binary" % rdf4jV,
     ),
     assembly / assemblyMergeStrategy := {

@@ -15,6 +15,8 @@ trait GroupedSerDes extends SerDes:
 
   protected var numElements: Long = _
   protected var numStatements: Long = _
+  protected var numElementsRdf4j: Long = _
+  protected var numStatementsRdf4j: Long = _
   protected var sourceData: GroupedData = _
 
   protected final def loadData(path: String, streamType: String, elementSize: Int, elements: Option[Int]): Unit =

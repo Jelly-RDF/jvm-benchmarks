@@ -31,5 +31,4 @@ object Constants:
   val rdf4jFormats: Map[String, (rio.RDFFormat, Option[rio.RDFFormat])] = Map(
     "rdf4j-nt" -> (rio.RDFFormat.NTRIPLES, Some(rio.RDFFormat.NQUADS)),
     "rdf4j-binary" -> (rio.RDFFormat.BINARY, Some(rio.RDFFormat.BINARY)),
-    "rdf4j-hdt" -> (rio.RDFFormat.HDT, None)
   )

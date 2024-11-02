@@ -77,10 +77,10 @@ object SizeBench extends GroupedSerDes:
         getSinks[DatasetGraph].map(s => hub.runWith(s))
 
     val rdf4jHub = rdf4jSource
-      .wireTap(_ => {
-        numStatements += 1
-        numElements += 1
-        if numElements % 10_000 == 0 then println(s"Processed $numElements RDF4J statements")
+      .wireTap(group => {
+        numStatementsRdf4j += group.size
+        numElementsRdf4j += 1
+        if numElementsRdf4j % 10_000 == 0 then println(s"Processed $numElementsRdf4j RDF4J statement groups")
       })
       .toMat(BroadcastHub.sink)(Keep.right)
       .run()
@@ -97,7 +97,7 @@ object SizeBench extends GroupedSerDes:
     for
       compressionMethod <- Seq("gzip", "zstd3", "zstd9")
       compressionMode <- Seq(None, Some("individual"), Some("continuous"))
-      experiment <- experiments
+      experiment <- experiments if !experiment.startsWith("rdf4j")
     yield
       val expName = experiment + compressionMode.fold("")(f"-${compressionMethod}-" + _)
       var (os, cos) = getOs(compressionMethod, compressionMode)
@@ -135,7 +135,7 @@ object SizeBench extends GroupedSerDes:
     for
       compressionMethod <- Seq("gzip", "zstd3", "zstd9")
       compressionMode <- Seq(None, Some("individual"), Some("continuous"))
-      experiment <- experiments
+      experiment <- experiments if experiment.startsWith("rdf4j")
     yield
       val expName = experiment + compressionMode.fold("")(f"-${compressionMethod}-" + _)
       var (os, cos) = getOs(compressionMethod, compressionMode)

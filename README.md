@@ -22,7 +22,7 @@ The resulting JAR will be placed in `target/scala-3.*/benchmarks-assembly-*.jar`
 
 ## Downloading the datasets
 
-The benchmarks can read RDF data from gzip-compressed Jelly files (preferred) or from compressed .tar.gz files. RiverBench datasets are distributed in both of these formats ([see documentation](https://w3id.org/riverbench/v/dev/documentation/dataset-release-format)), but Jelly is much faster to read from. You can manually download the datasets, but we recommend using the built-in download utility:
+The benchmarks can read RDF data from compressionMode-compressed Jelly files (preferred) or from compressed .tar.gz files. RiverBench datasets are distributed in both of these formats ([see documentation](https://w3id.org/riverbench/v/dev/documentation/dataset-release-format)), but Jelly is much faster to read from. You can manually download the datasets, but we recommend using the built-in download utility:
 
 ```shell
 java -cp [path-to-benchmark-jar] eu.ostrzyciel.jelly.benchmark.runDownloadDatasetsUtility [profile] [version] [size] [output-directory]

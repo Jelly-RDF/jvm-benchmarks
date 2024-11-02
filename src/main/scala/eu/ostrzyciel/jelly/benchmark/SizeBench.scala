@@ -4,6 +4,7 @@ import com.google.common.io.CountingOutputStream
 import eu.ostrzyciel.jelly.benchmark.traits.GroupedSerDes
 import eu.ostrzyciel.jelly.benchmark.util.{DataLoader, GroupedDataStream}
 import eu.ostrzyciel.jelly.convert.jena.JenaConverterFactory
+import org.apache.commons.compress.compressors.zstandard.ZstdCompressorOutputStream
 import org.apache.commons.io.output.NullOutputStream
 import org.apache.jena.rdf.model.Model
 import org.apache.jena.sparql.core.DatasetGraph
@@ -81,26 +82,30 @@ object SizeBench extends GroupedSerDes:
 
   private def getSinks[T <: Model | DatasetGraph]:
   Seq[Sink[T, Future[(String, Long, Long)]]] =
-    for gzip <- Seq(None, Some("individual"), Some("continuous")); experiment <- experiments yield
-      val expName = experiment + gzip.fold("")("-gzip-" + _)
-      var (os, cos) = getOs(gzip = gzip.isDefined)
-      val individualGzip = gzip.isDefined && gzip.get == "individual"
+    for
+      compressionMethod <- Seq("gzip", "zstd3", "zstd9")
+      compressionMode <- Seq(None, Some("individual"), Some("continuous"))
+      experiment <- experiments
+    yield
+      val expName = experiment + compressionMode.fold("")(f"-${compressionMethod}-" + _)
+      var (os, cos) = getOs(compressionMethod, compressionMode)
+      val individualCompression = compressionMode.isDefined && compressionMode.get == "individual"
       val sink = if experiment.startsWith("jelly") then
         val opts = getJellyOpts(experiment, streamType, grouped = false)
         val encoder = JenaConverterFactory.encoder(opts)
         Flow[T].map(m => serJellyOneElement(m, encoder, frame => {
           frame.writeTo(os)
-          if individualGzip then
+          if individualCompression then
             os.close()
-            os = new GZIPOutputStream(cos)
+            os = reWrapOs(compressionMethod, cos)
         }))
       else
         val format = getJenaFormat(experiment, streamType).get
         Flow[T].map(m => {
           serJena(m, format, os)
-          if individualGzip then
+          if individualCompression then
             os.close()
-            os = new GZIPOutputStream(cos)
+            os = reWrapOs(compressionMethod, cos)
         })
       sink
         .recover(e => {
@@ -109,13 +114,19 @@ object SizeBench extends GroupedSerDes:
         })
         .toMat(Sink.fold(0L)((acc, _) => acc + 1L))(Keep.right)
         .mapMaterializedValue(f => f.map(counter => {
-          if !individualGzip then
+          if !individualCompression then
             os.close()
           (expName, cos.getCount, counter)
         }))
 
-  private def getOs(gzip: Boolean): (OutputStream, CountingOutputStream) =
+  private def getOs(method: String, mode: Option[String]): (OutputStream, CountingOutputStream) =
     val cos = new CountingOutputStream(NullOutputStream.INSTANCE)
-    if gzip then
-      (new java.util.zip.GZIPOutputStream(cos), cos)
+    if mode.isDefined then
+      (reWrapOs(method, cos), cos)
     else (cos, cos)
+
+  private def reWrapOs(method: String, cos: OutputStream): OutputStream =
+    if method == "gzip" then new GZIPOutputStream(cos)
+    else if method == "zstd3" then new ZstdCompressorOutputStream(cos, 3)
+    else if method == "zstd9" then new ZstdCompressorOutputStream(cos, 9)
+    else cos

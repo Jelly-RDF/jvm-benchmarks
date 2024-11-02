@@ -19,6 +19,7 @@ lazy val root = (project in file("."))
       "org.apache.jena" % "jena-core" % jenaV,
       "org.apache.jena" % "jena-arq" % jenaV,
       "org.apache.pekko" %% "pekko-connectors-kafka" % "1.1.0",
+      "org.apache.commons" % "commons-compress" % "1.27.1",
     ),
     assembly / assemblyMergeStrategy := {
       case PathList("module-info.class") => MergeStrategy.discard

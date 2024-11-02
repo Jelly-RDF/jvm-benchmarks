@@ -40,3 +40,6 @@ object ConfigManager:
     val jelly: Seq[String] = config.getString("jelly.enabled-formats.jelly")
       .split(',')
       .map(_.trim.prependedAll("jelly-"))
+    val rdf4j: Seq[String] = config.getString("jelly.enabled-formats.rdf4j")
+      .split(',')
+      .map(_.trim.prependedAll("rdf4j-"))

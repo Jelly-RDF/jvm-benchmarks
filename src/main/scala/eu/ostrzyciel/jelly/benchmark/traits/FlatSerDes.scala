@@ -1,21 +1,28 @@
 package eu.ostrzyciel.jelly.benchmark.traits
 
-import eu.ostrzyciel.jelly.benchmark.util.{DataLoader, FlatData}
+import eu.ostrzyciel.jelly.benchmark.util.{DataLoader, FlatData, FlatDataRdf4j}
 import eu.ostrzyciel.jelly.convert.jena.JenaConverterFactory
 import eu.ostrzyciel.jelly.core.proto.v1.{RdfStreamFrame, RdfStreamOptions}
-import org.apache.jena.riot.RDFFormat
+import org.apache.jena.riot
 import org.apache.jena.riot.system.StreamRDFWriter
+import org.eclipse.rdf4j.rio
 
 import java.io.{InputStream, OutputStream}
 
 trait FlatSerDes extends SerDes:
   protected var numStatements: Long = _
   protected var sourceData: FlatData = _
+  protected var sourceDataRdf4j: FlatDataRdf4j = _
 
   protected final def loadData(path: String, streamType: String, statements: Int): Unit =
     val d = DataLoader.getSourceDataJellyFlat(path, streamType, if statements == 0 then None else Some(statements))
     numStatements = d.fold(identity, identity).size
     sourceData = d
+
+  protected final def loadDataRdf4j(path: String, statements: Int): Unit =
+    val d = DataLoader.getSourceDataJellyRdf4jFlat(path, if statements == 0 then None else Some(statements))
+    numStatements = d.size
+    sourceDataRdf4j = d
 
   protected final def serJelly(
     opt: RdfStreamOptions, closure: RdfStreamFrame => Unit, frameSize: Int
@@ -29,13 +36,19 @@ trait FlatSerDes extends SerDes:
       .map(RdfStreamFrame(_))
       .foreach(closure)
 
-  protected final def serJena(format: RDFFormat, outputStream: OutputStream): Unit =
+  protected final def serJena(format: riot.RDFFormat, outputStream: OutputStream): Unit =
     val writer = StreamRDFWriter.getWriterStream(outputStream, format.getLang)
     writer.start()
     sourceData match
       case Left(triples) => triples.foreach(writer.triple)
       case Right(quads) => quads.foreach(writer.quad)
     writer.finish()
+
+  protected final def serRdf4j(format: rio.RDFFormat, outputStream: OutputStream): Unit =
+    val writer = rio.Rio.createWriter(format, outputStream)
+    writer.startRDF()
+    sourceDataRdf4j.foreach(writer.handleStatement)
+    writer.endRDF()
 
   protected final def desJelly(inputStream: InputStream, streamType: String): Unit =
     val decoder = streamType match

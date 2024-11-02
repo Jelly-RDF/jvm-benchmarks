@@ -5,6 +5,8 @@ import eu.ostrzyciel.jelly.core.proto.v1.{RdfStreamFrame, RdfStreamOptions}
 import org.apache.jena.rdf.model.Model
 import org.apache.jena.riot.{RDFFormat, RDFWriter}
 import org.apache.jena.sparql.core.DatasetGraph
+import org.eclipse.rdf4j.model.Statement
+import org.eclipse.rdf4j.rio
 
 import java.io.OutputStream
 
@@ -92,6 +94,12 @@ trait GroupedSerDes extends SerDes:
       case model: Model => writer.source(model.getGraph)
       case dataset: DatasetGraph => writer.source(dataset)
     writer.output(outputStream)
+    
+  protected final def serRdf4j(sourceData: Seq[Statement], format: rio.RDFFormat, outputStream: OutputStream): Unit =
+    val writer = rio.Rio.createWriter(format, outputStream)
+    writer.startRDF()
+    sourceData.foreach(writer.handleStatement)
+    writer.endRDF()
 
   protected final def desJelly(input: Iterable[Array[Byte]], streamType: String): Unit =
     val decoder = streamType match

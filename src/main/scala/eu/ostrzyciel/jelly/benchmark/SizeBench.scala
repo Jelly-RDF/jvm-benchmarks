@@ -33,7 +33,7 @@ object SizeBench extends GroupedSerDes:
    */
   @main
   def runSizeBench(streamType: String, elementSize: Int, elements: Int, sourceFilePath: String): Unit =
-    initExperiment(flatStreaming = false, rdf4j = true, streamType)
+    initExperiment(flatStreaming = false, jena = true, rdf4j = true, streamType)
     val dataSource = DataLoader.getSourceDataAsStream(
       sourceFilePath, streamType, elementSize,
       if elements == 0 then None else Some(elements)

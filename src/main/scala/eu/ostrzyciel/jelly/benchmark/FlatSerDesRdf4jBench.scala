@@ -5,16 +5,15 @@ import eu.ostrzyciel.jelly.benchmark.util.{ConfigManager, Experiments}
 import org.apache.commons.io.output.ByteArrayOutputStream
 
 import java.io.OutputStream
-import scala.collection.mutable
 import scala.collection.mutable.ArrayBuffer
 
-object FlatSerDesBench extends FlatSerDes:
+object FlatSerDesRdf4jBench extends FlatSerDes:
   import eu.ostrzyciel.jelly.benchmark.util.Experiments.*
   import eu.ostrzyciel.jelly.benchmark.util.Util.*
 
   /**
-   * Benchmark for serializing and deserializing flat RDF streams.
-   * Here we test the DELIMITED variant of Jelly and Jena's statement-level streaming RDF serializers.
+   * Benchmark for serializing and deserializing flat RDF streams using RDF4J.
+   * Here we test the DELIMITED variant of Jelly and RDF4j's streaming RDF serializers.
    *
    * @param tasks "ser", "des", or "ser,des"
    * @param streamType "triples", "quads"
@@ -23,14 +22,14 @@ object FlatSerDesBench extends FlatSerDes:
    * @param sourceFilePath path to the source file (only jelly.gz files are supported)
    */
   @main
-  def runFlatSerDesBench(
+  def runFlatSerDesRdf4jBench(
     tasks: String, streamType: String, jellyFrameSize: Int, statements: Int, sourceFilePath: String
   ): Unit =
     val taskSeq = tasks.split(',')
-    loadData(sourceFilePath, streamType, statements)
+    loadDataRdf4j(sourceFilePath, statements)
 
     def saveResults(task: String): Unit =
-      saveRunInfo(s"flat_raw_$task", Map(
+      saveRunInfo(s"flat_raw_rdf4j_$task", Map(
         "statements" -> numStatements,
         "order" -> experiments,
         "times" -> times,
@@ -40,12 +39,12 @@ object FlatSerDesBench extends FlatSerDes:
       ))
 
     if taskSeq.contains("ser") then
-      initExperiment(flatStreaming = true, jena = true, rdf4j = false, streamType)
+      initExperiment(flatStreaming = true, jena = false, rdf4j = true, streamType)
       mainSer(jellyFrameSize)
       saveResults("ser")
       System.gc()
     if taskSeq.contains("des") then
-      initExperiment(flatStreaming = true, jena = true, rdf4j = false, streamType)
+      initExperiment(flatStreaming = true, jena = false, rdf4j = true, streamType)
       mainDes(jellyFrameSize)
       saveResults("des")
 
@@ -62,7 +61,7 @@ object FlatSerDesBench extends FlatSerDes:
 
       if experiment.startsWith("jelly") then
         times(experiment) += time {
-          serJelly(
+          serJellyRdf4j(
             getJellyOpts(experiment, streamType, grouped = false),
             _.writeDelimitedTo(outputStream),
             jellyFrameSize
@@ -71,7 +70,7 @@ object FlatSerDesBench extends FlatSerDes:
       else
         try {
           times(experiment) += time {
-            serJena(getJenaFormat(experiment, streamType).get, outputStream)
+            serRdf4j(getRdf4jFormat(experiment, streamType).get, outputStream)
           }
         } catch {
           case e: Exception =>
@@ -90,7 +89,7 @@ object FlatSerDesBench extends FlatSerDes:
           // This would fail for example with jena-nt, 10M quads, assist-iot-weather-graphs.
           // It's safer to limit the number of statements to 5M.
           val outputStream = new ByteArrayOutputStream()
-          serJelly(
+          serJellyRdf4j(
             getJellyOpts(experiment, streamType, grouped = false),
             _.writeDelimitedTo(outputStream),
             jellyFrameSize,
@@ -98,7 +97,7 @@ object FlatSerDesBench extends FlatSerDes:
           outputStream
         else
           val outputStream = new ByteArrayOutputStream()
-          serJena(getJenaFormat(experiment, streamType).get, outputStream)
+          serRdf4j(getRdf4jFormat(experiment, streamType).get, outputStream)
           outputStream
 
         if serialized.size() <= 0 then
@@ -111,14 +110,13 @@ object FlatSerDesBench extends FlatSerDes:
           println(f"Try: $i, experiment: $experiment")
           if experiment.startsWith("jelly") then
             times(experiment) += time {
-              desJelly(serialized.toInputStream, streamType)
+              desJellyRdf4j(serialized.toInputStream, streamType)
             }
           else
             times(experiment) += time {
-              desJena(
+              desRdf4j(
                 serialized.toInputStream,
-                getJenaFormat(experiment, streamType).get,
-                streamType
+                getRdf4jFormat(experiment, streamType).get
               )
             }
       } catch {

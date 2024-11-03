@@ -23,15 +23,16 @@ trait SerDes:
   protected var times: Map[String, mutable.ArrayBuffer[Long]] = _
   protected var streamType: String = _
 
-  protected final def initExperiment(flatStreaming: Boolean, rdf4j: Boolean, streamType: String): Unit =
+  protected final def initExperiment(flatStreaming: Boolean, jena: Boolean, rdf4j: Boolean, streamType: String): Unit =
     // Only run Jelly for GRAPHS streams – in Jena it's the same as QUADS
-    val doJena = streamType != "graphs"
+    val doJena = jena && streamType != "graphs"
+    val doRdf4j = rdf4j && streamType != "graphs"
     this.streamType = streamType
     experiments = Experiments.getFormatKeysToTest(
       jena = doJena && !flatStreaming, 
       jenaStreaming = doJena, 
       jelly = true, 
-      rdf4j = rdf4j,
+      rdf4j = doRdf4j,
       streamType
     )
     times = experiments.map(_ -> mutable.ArrayBuffer[Long]()).toMap

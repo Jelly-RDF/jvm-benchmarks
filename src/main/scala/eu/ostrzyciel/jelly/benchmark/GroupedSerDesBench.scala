@@ -38,12 +38,12 @@ object GroupedSerDesBench extends GroupedSerDes:
       ))
 
     if taskSeq.contains("ser") then
-      initExperiment(flatStreaming = false, rdf4j = false, streamType)
+      initExperiment(flatStreaming = false, jena = true, rdf4j = false, streamType)
       mainSer()
       saveResults("ser")
       System.gc()
     if taskSeq.contains("des") then
-      initExperiment(flatStreaming = false, rdf4j = false, streamType)
+      initExperiment(flatStreaming = false, jena = true, rdf4j = false, streamType)
       mainDes()
       saveResults("des")
     

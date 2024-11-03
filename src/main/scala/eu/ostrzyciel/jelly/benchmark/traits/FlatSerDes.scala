@@ -2,6 +2,7 @@ package eu.ostrzyciel.jelly.benchmark.traits
 
 import eu.ostrzyciel.jelly.benchmark.util.{DataLoader, FlatData, FlatDataRdf4j}
 import eu.ostrzyciel.jelly.convert.jena.JenaConverterFactory
+import eu.ostrzyciel.jelly.convert.rdf4j.Rdf4jConverterFactory
 import eu.ostrzyciel.jelly.core.proto.v1.{RdfStreamFrame, RdfStreamOptions}
 import org.apache.jena.riot
 import org.apache.jena.riot.system.StreamRDFWriter
@@ -36,6 +37,19 @@ trait FlatSerDes extends SerDes:
       .map(RdfStreamFrame(_))
       .foreach(closure)
 
+  protected final def serJellyRdf4j(
+    opt: RdfStreamOptions, closure: RdfStreamFrame => Unit, frameSize: Int
+  ): Unit =
+    val encoder = Rdf4jConverterFactory.encoder(opt)
+    val rows = if opt.physicalType.isTriples then
+      sourceDataRdf4j.flatMap(encoder.addTripleStatement)
+    else
+      sourceDataRdf4j.flatMap(encoder.addQuadStatement)
+    rows
+      .grouped(frameSize)
+      .map(RdfStreamFrame(_))
+      .foreach(closure)
+
   protected final def serJena(format: riot.RDFFormat, outputStream: OutputStream): Unit =
     val writer = StreamRDFWriter.getWriterStream(outputStream, format.getLang)
     writer.start()
@@ -54,6 +68,15 @@ trait FlatSerDes extends SerDes:
     val decoder = streamType match
       case "triples" => JenaConverterFactory.triplesDecoder(None)
       case "quads" => JenaConverterFactory.quadsDecoder(None)
+    Iterator.continually(RdfStreamFrame.parseDelimitedFrom(inputStream))
+      .takeWhile(_.isDefined)
+      .map(frame => frame.get.rows.map(decoder.ingestRow).foreach(_ => {}))
+      .foreach(_ => {})
+
+  protected final def desJellyRdf4j(inputStream: InputStream, streamType: String): Unit =
+    val decoder = streamType match
+      case "triples" => Rdf4jConverterFactory.triplesDecoder(None)
+      case "quads" => Rdf4jConverterFactory.quadsDecoder(None)
     Iterator.continually(RdfStreamFrame.parseDelimitedFrom(inputStream))
       .takeWhile(_.isDefined)
       .map(frame => frame.get.rows.map(decoder.ingestRow).foreach(_ => {}))

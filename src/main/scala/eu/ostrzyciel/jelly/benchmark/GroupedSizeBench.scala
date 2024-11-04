@@ -18,7 +18,7 @@ import scala.collection.mutable
 import scala.concurrent.duration.*
 import scala.concurrent.{Await, Future}
 
-object SizeBench extends GroupedSerDes:
+object GroupedSizeBench extends GroupedSerDes:
   import eu.ostrzyciel.jelly.benchmark.util.Experiments.*
   import eu.ostrzyciel.jelly.benchmark.util.Util.*
   import eu.ostrzyciel.jelly.convert.jena.given
@@ -32,7 +32,7 @@ object SizeBench extends GroupedSerDes:
    * @param sourceFilePath path to the source file
    */
   @main
-  def runSizeBench(streamType: String, elementSize: Int, elements: Int, sourceFilePath: String): Unit =
+  def runGroupedSizeBench(streamType: String, elementSize: Int, elements: Int, sourceFilePath: String): Unit =
     initExperiment(flatStreaming = false, jena = true, rdf4j = true, streamType)
     val dataSource = DataLoader.getSourceDataAsStream(
       sourceFilePath, streamType, elementSize,

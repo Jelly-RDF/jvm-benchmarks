@@ -12,6 +12,7 @@ import java.io.{InputStream, OutputStream}
 
 trait FlatSerDes extends SerDes:
   protected var numStatements: Long = _
+  protected var numStatementsRdf4j: Long = _
   protected var sourceData: FlatData = _
   protected var sourceDataRdf4j: FlatDataRdf4j = _
 

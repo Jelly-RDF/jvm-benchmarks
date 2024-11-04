@@ -37,8 +37,9 @@ object FlatSizeBench extends FlatSerDes:
   def runFlatSizeBench(streamType: String, statements: Int, sourceFilePath: String): Unit =
     JenaSystem.init()
     initExperiment(flatStreaming = true, jena = true, rdf4j = true, streamType)
-    val dataSource = DataLoader.jellySourceFlat(sourceFilePath, streamType, Some(statements))
-    val rdf4jSource = DataLoader.jellySourceRdf4jFlat(sourceFilePath, Some(statements))
+    val stOption = if statements == 0 then None else Some(statements)
+    val dataSource = DataLoader.jellySourceFlat(sourceFilePath, streamType, stOption)
+    val rdf4jSource = DataLoader.jellySourceRdf4jFlat(sourceFilePath, stOption)
     run(dataSource, rdf4jSource)
     saveRunInfo(s"size_flat_$streamType", Map(
       "statementLimit" -> statements,
@@ -102,7 +103,7 @@ object FlatSizeBench extends FlatSerDes:
       val lang = if experiment.startsWith("jelly") then
         val opts = getJellyOpts(experiment, streamType, grouped = false)
         context.set(JellyLanguage.SYMBOL_STREAM_OPTIONS, opts)
-          .set(JellyLanguage.SYMBOL_FRAME_SIZE, 1024)
+          .set(JellyLanguage.SYMBOL_FRAME_SIZE, 512)
         JellyLanguage.JELLY
       else
         getJenaFormat(experiment, streamType).get.getLang

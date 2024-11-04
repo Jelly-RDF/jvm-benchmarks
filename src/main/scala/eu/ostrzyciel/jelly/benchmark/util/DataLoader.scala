@@ -54,6 +54,20 @@ object DataLoader:
 
   /**
    * @param path        path to the source file
+   * @param elementSize number of statements in a single chunk – set to 0 to disable chunking
+   * @param elements    number of elements to process or None to process all
+   * @return (numStatements, numElements, elements)
+   */
+  def getSourceDataRdf4j(path: String, elementSize: Int, elements: Option[Int])(using ActorSystem[_]):
+  (Long, Long, GroupedDataRdf4j) =
+    val source = jellySourceRdf4j(path, elementSize, elements)
+    println("Loading the source file...")
+    val readFuture = source.runWith(Sink.seq)
+    val items = Await.result(readFuture, 3.hours)
+    (items.map(_.size).sum, items.size, items)
+
+  /**
+   * @param path        path to the source file
    * @param streamType  "triples" or "quads" or "graphs"
    * @param elementSize number of statements in a single chunk – set to 0 to disable chunking
    * @param elements    number of elements to process or None to process all

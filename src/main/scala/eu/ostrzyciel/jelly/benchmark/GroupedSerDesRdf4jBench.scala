@@ -2,31 +2,29 @@ package eu.ostrzyciel.jelly.benchmark
 
 import eu.ostrzyciel.jelly.benchmark.traits.GroupedSerDes
 import eu.ostrzyciel.jelly.benchmark.util.*
-import org.apache.jena.rdf.model.Model
-import org.apache.jena.sparql.core.DatasetGraph
 
 import java.io.{ByteArrayInputStream, ByteArrayOutputStream, OutputStream}
 import scala.collection.mutable.ArrayBuffer
 
-object GroupedSerDesBench extends GroupedSerDes:
+object GroupedSerDesRdf4jBench extends GroupedSerDes:
   import eu.ostrzyciel.jelly.benchmark.util.Experiments.*
   import eu.ostrzyciel.jelly.benchmark.util.Util.*
 
   /**
    * @param tasks "ser", "des", or "ser,des"
-   * @param streamType "triples", "quads", "graphs"
+   * @param streamType "triples" or "quads". "graphs" is not supported.
    * @param elementSize 0 for the same as in the original stream, or a number for the size of the elements
    * @param elements number of elements to process or 0 to process all
    * @param sourceFilePath path to the source file
    */
   @main
-  def runGroupedSerDesBench(tasks: String, streamType: String, elementSize: Int, elements: Int, sourceFilePath: String): 
+  def runGroupedSerDesRdf4jBench(tasks: String, streamType: String, elementSize: Int, elements: Int, sourceFilePath: String):
   Unit =
     val taskSeq = tasks.split(',')
-    loadData(sourceFilePath, streamType, elementSize, if elements == 0 then None else Some(elements))
+    loadDataRdf4j(sourceFilePath, elementSize, if elements == 0 then None else Some(elements))
 
     def saveResults(task: String): Unit =
-      saveRunInfo(s"grouped_raw_$task", Map(
+      saveRunInfo(s"grouped_raw_rdf4j_$task", Map(
         "order" -> experiments,
         "times" -> times,
         "file" -> sourceFilePath,
@@ -38,12 +36,12 @@ object GroupedSerDesBench extends GroupedSerDes:
       ))
 
     if taskSeq.contains("ser") then
-      initExperiment(flatStreaming = false, jena = true, rdf4j = false, streamType)
+      initExperiment(flatStreaming = false, jena = false, rdf4j = true, streamType)
       mainSer()
       saveResults("ser")
       System.gc()
     if taskSeq.contains("des") then
-      initExperiment(flatStreaming = false, jena = true, rdf4j = false, streamType)
+      initExperiment(flatStreaming = false, jena = false, rdf4j = true, streamType)
       mainDes()
       saveResults("des")
     
@@ -62,17 +60,13 @@ object GroupedSerDesBench extends GroupedSerDes:
       if experiment.startsWith("jelly") then
         val stream = OutputStream.nullOutputStream
         times(experiment) += time {
-          serJelly(getJellyOpts(experiment, streamType, grouped = true), frame => frame.writeTo(stream))
+          serJellyRdf4j(getJellyOpts(experiment, streamType, grouped = true), frame => frame.writeTo(stream))
         }
       else
         try {
-          val sourceFlat = sourceData match
-            case Left(v) => v
-            case Right(v) => v
-
           times(experiment) += time {
-            for item <- sourceFlat do
-              serJena(item, getJenaFormat(experiment, streamType).get, OutputStream.nullOutputStream)
+            for item <- sourceDataRdf4j do
+              serRdf4j(item, getRdf4jFormat(experiment, streamType).get, OutputStream.nullOutputStream)
           }
         } catch {
           case e: Exception =>
@@ -87,20 +81,17 @@ object GroupedSerDesBench extends GroupedSerDes:
         val serialized = {
           if experiment.startsWith("jelly") then
             val serBuffer = ArrayBuffer[Array[Byte]]()
-            serJelly(
+            serJellyRdf4j(
               getJellyOpts(experiment, streamType, true),
               frame => serBuffer.append(frame.toByteArray)
             )
             serBuffer
           else
-            val jenaFormat = getJenaFormat(experiment, streamType).get
+            val rdf4jFormat = getRdf4jFormat(experiment, streamType).get
             val serBuffer = ArrayBuffer[Array[Byte]]()
-            val sourceFlat = sourceData match
-              case Left(v) => v
-              case Right(v) => v
-            for item <- sourceFlat do
+            for item <- sourceDataRdf4j do
               val oStream = new ByteArrayOutputStream()
-              serJena(item, jenaFormat, oStream)
+              serRdf4j(item, rdf4jFormat, oStream)
               serBuffer.append(oStream.toByteArray)
             serBuffer
         }
@@ -112,16 +103,15 @@ object GroupedSerDesBench extends GroupedSerDes:
           println(f"Try: $i, experiment: $experiment")
           if experiment.startsWith("jelly") then
             times(experiment) += time {
-              desJelly(serialized, streamType)
+              desJellyRdf4j(serialized, streamType)
             }
           else
-            val jenaFormat = getJenaFormat(experiment, streamType).get
+            val rdf4jFormat = getRdf4jFormat(experiment, streamType).get
             times(experiment) += time {
               for buffer <- serialized do
-                desJena(
+                desRdf4j(
                   new ByteArrayInputStream(buffer),
-                  jenaFormat, 
-                  streamType
+                  rdf4jFormat,
                 )
             }
       } catch {

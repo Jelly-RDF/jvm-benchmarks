@@ -8,6 +8,7 @@ import org.apache.pekko.stream.scaladsl.Source
 import org.eclipse.rdf4j.model.Statement
 
 type GroupedData = Either[Seq[Model], Seq[DatasetGraph]]
+type GroupedDataRdf4j = Seq[Seq[Statement]]
 type FlatData = Either[Seq[Triple], Seq[Quad]]
 type FlatDataRdf4j = Seq[Statement]
 type GroupedDataStream = Either[Source[Model, NotUsed], Source[DatasetGraph, NotUsed]]

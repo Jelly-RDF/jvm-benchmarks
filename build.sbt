@@ -5,7 +5,7 @@ resolvers +=
   "Sonatype OSS Snapshots" at "https://s01.oss.sonatype.org/content/repositories/snapshots"
 
 // val jellyV = "2.2.1"
-val jellyV = "2.2.1+8-f89a467b-SNAPSHOT"
+val jellyV = "2.2.1+11-71065314-SNAPSHOT"
 val jenaV = "5.2.0"
 val rdf4jV = "5.0.2"
 

@@ -6,7 +6,9 @@ import eu.ostrzyciel.jelly.convert.rdf4j.Rdf4jConverterFactory
 import eu.ostrzyciel.jelly.core.proto.v1.{RdfStreamFrame, RdfStreamOptions}
 import org.apache.jena.riot
 import org.apache.jena.riot.system.StreamRDFWriter
+import org.apache.jena.sparql.util.Context
 import org.eclipse.rdf4j.rio
+import org.eclipse.rdf4j.rio.WriterConfig
 
 import java.io.{InputStream, OutputStream}
 
@@ -26,41 +28,17 @@ trait FlatSerDes extends SerDes:
     numStatements = d.size
     sourceDataRdf4j = d
 
-  protected final def serJelly(
-    opt: RdfStreamOptions, closure: RdfStreamFrame => Unit, frameSize: Int
-  ): Unit =
-    val encoder = JenaConverterFactory.encoder(opt)
-    val rows = sourceData match
-      case Left(triples) => triples.flatMap(encoder.addTripleStatement)
-      case Right(quads) => quads.flatMap(encoder.addQuadStatement)
-    rows
-      .grouped(frameSize)
-      .map(RdfStreamFrame(_))
-      .foreach(closure)
-
-  protected final def serJellyRdf4j(
-    opt: RdfStreamOptions, closure: RdfStreamFrame => Unit, frameSize: Int
-  ): Unit =
-    val encoder = Rdf4jConverterFactory.encoder(opt)
-    val rows = if opt.physicalType.isTriples then
-      sourceDataRdf4j.flatMap(encoder.addTripleStatement)
-    else
-      sourceDataRdf4j.flatMap(encoder.addQuadStatement)
-    rows
-      .grouped(frameSize)
-      .map(RdfStreamFrame(_))
-      .foreach(closure)
-
-  protected final def serJena(format: riot.RDFFormat, outputStream: OutputStream): Unit =
-    val writer = StreamRDFWriter.getWriterStream(outputStream, format.getLang)
+  protected final def serJena(format: riot.RDFFormat, ctx: Context, outputStream: OutputStream): Unit =
+    val writer = StreamRDFWriter.getWriterStream(outputStream, format, ctx)
     writer.start()
     sourceData match
       case Left(triples) => triples.foreach(writer.triple)
       case Right(quads) => quads.foreach(writer.quad)
     writer.finish()
 
-  protected final def serRdf4j(format: rio.RDFFormat, outputStream: OutputStream): Unit =
+  protected final def serRdf4j(format: rio.RDFFormat, config: WriterConfig, outputStream: OutputStream): Unit =
     val writer = rio.Rio.createWriter(format, outputStream)
+    writer.setWriterConfig(config)
     writer.startRDF()
     sourceDataRdf4j.foreach(writer.handleStatement)
     writer.endRDF()

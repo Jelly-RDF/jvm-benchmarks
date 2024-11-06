@@ -1,7 +1,7 @@
 package eu.ostrzyciel.jelly.benchmark
 
 import com.google.common.io.CountingOutputStream
-import eu.ostrzyciel.jelly.benchmark.traits.GroupedSerDes
+import eu.ostrzyciel.jelly.benchmark.traits.*
 import eu.ostrzyciel.jelly.benchmark.util.{DataLoader, GroupedDataStream, GroupedDataStreamRdf4j}
 import eu.ostrzyciel.jelly.convert.jena.JenaConverterFactory
 import org.apache.commons.compress.compressors.zstandard.ZstdCompressorOutputStream
@@ -18,7 +18,7 @@ import scala.collection.mutable
 import scala.concurrent.duration.*
 import scala.concurrent.{Await, Future}
 
-object GroupedSizeBench extends GroupedSerDes:
+object GroupedSizeBench extends GroupedSerDes, Size:
   import eu.ostrzyciel.jelly.benchmark.util.Experiments.*
   import eu.ostrzyciel.jelly.benchmark.util.Util.*
   import eu.ostrzyciel.jelly.convert.jena.given
@@ -86,7 +86,7 @@ object GroupedSizeBench extends GroupedSerDes:
       .run()
     val rdf4jResultFutures = getRdf4jSinks.map(s => rdf4jHub.runWith(s))
 
-    val results = Await.result(Future.sequence(resultFutures ++ rdf4jResultFutures), 4.hours)
+    val results = Await.result(Future.sequence(resultFutures ++ rdf4jResultFutures), 24.hours)
     results.foreach { case (expName, size, count) =>
       println(f"Experiment $expName: $size bytes, $count elements")
       sizes.updateWith(expName)(_.map(_ + size).orElse(Some(size)))
@@ -159,15 +159,3 @@ object GroupedSizeBench extends GroupedSerDes:
             os.close()
           (expName, cos.getCount, counter)
         }))
-
-  private def getOs(method: String, mode: Option[String]): (OutputStream, CountingOutputStream) =
-    val cos = new CountingOutputStream(NullOutputStream.INSTANCE)
-    if mode.isDefined then
-      (reWrapOs(method, cos), cos)
-    else (cos, cos)
-
-  private def reWrapOs(method: String, cos: OutputStream): OutputStream =
-    if method == "gzip" then new GZIPOutputStream(cos)
-    else if method == "zstd3" then new ZstdCompressorOutputStream(cos, 3)
-    else if method == "zstd9" then new ZstdCompressorOutputStream(cos, 9)
-    else cos

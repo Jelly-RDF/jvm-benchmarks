@@ -2,7 +2,9 @@ package eu.ostrzyciel.jelly.benchmark
 
 import eu.ostrzyciel.jelly.benchmark.traits.FlatSerDes
 import eu.ostrzyciel.jelly.benchmark.util.{ConfigManager, Experiments}
+import eu.ostrzyciel.jelly.convert.jena.riot.*
 import org.apache.commons.io.output.ByteArrayOutputStream
+import org.apache.jena.riot.RIOT
 
 import java.io.OutputStream
 import scala.collection.mutable
@@ -59,49 +61,45 @@ object FlatSerDesBench extends FlatSerDes:
       Thread.sleep(3000)
       println(f"Try: $i, experiment: $experiment")
       val outputStream = OutputStream.nullOutputStream
-
-      if experiment.startsWith("jelly") then
-        times(experiment) += time {
-          serJelly(
-            getJellyOpts(experiment, streamType, grouped = false),
-            _.writeDelimitedTo(outputStream),
-            jellyFrameSize
-          )
-        }
+      val context = RIOT.getContext.copy()
+      val format = if experiment.startsWith("jelly") then
+        val opts = getJellyOpts(experiment, streamType, grouped = false)
+        context.set(JellyLanguage.SYMBOL_STREAM_OPTIONS, opts)
+          .set(JellyLanguage.SYMBOL_FRAME_SIZE, 512)
+        JellyFormat.JELLY_SMALL_STRICT // this gets overridden by the context
       else
-        try {
-          times(experiment) += time {
-            serJena(getJenaFormat(experiment, streamType).get, outputStream)
-          }
-        } catch {
-          case e: Exception =>
-            println(f"Failed to serialize with $experiment")
-            e.printStackTrace()
+        getJenaFormat(experiment, streamType).get
+
+      try {
+        times(experiment) += time {
+          serJena(format, context, outputStream)
         }
+      } catch {
+        case e: Exception =>
+          println(f"Failed to serialize with $experiment")
+          e.printStackTrace()
+      }
 
   private def mainDes(jellyFrameSize: Int): Unit =
     for experiment <- experiments do
       println("Serializing to memory...")
       try {
-
-        val serialized = if experiment.startsWith("jelly") then
-          // Use Apache Commons implementation of ByteArrayOutputStream to avoid additional buffer copying.
-          // Note that this implementation is still limited to Int.MaxValue bytes.
-          // This would fail for example with jena-nt, 10M quads, assist-iot-weather-graphs.
-          // It's safer to limit the number of statements to 5M.
-          val outputStream = new ByteArrayOutputStream()
-          serJelly(
-            getJellyOpts(experiment, streamType, grouped = false),
-            _.writeDelimitedTo(outputStream),
-            jellyFrameSize,
-          )
-          outputStream
+        // Use Apache Commons implementation of ByteArrayOutputStream to avoid additional buffer copying.
+        // Note that this implementation is still limited to Int.MaxValue bytes.
+        // This would fail for example with jena-nt, 10M quads, assist-iot-weather-graphs.
+        // It's safer to limit the number of statements to 5M.
+        val outputStream = new ByteArrayOutputStream()
+        val context = RIOT.getContext.copy()
+        val format = if experiment.startsWith("jelly") then
+          val opts = getJellyOpts(experiment, streamType, grouped = false)
+          context.set(JellyLanguage.SYMBOL_STREAM_OPTIONS, opts)
+            .set(JellyLanguage.SYMBOL_FRAME_SIZE, 512)
+          JellyFormat.JELLY_SMALL_STRICT // this gets overridden by the context
         else
-          val outputStream = new ByteArrayOutputStream()
-          serJena(getJenaFormat(experiment, streamType).get, outputStream)
-          outputStream
+          getJenaFormat(experiment, streamType).get
+        serJena(format, context, outputStream)
 
-        if serialized.size() <= 0 then
+        if outputStream.size() <= 0 then
           throw new Exception("Serialization failed -- buffer size is larger than Int.MaxValue")
 
         for i <- 1 to ConfigManager.benchmarkRepeats do
@@ -111,12 +109,12 @@ object FlatSerDesBench extends FlatSerDes:
           println(f"Try: $i, experiment: $experiment")
           if experiment.startsWith("jelly") then
             times(experiment) += time {
-              desJelly(serialized.toInputStream, streamType)
+              desJelly(outputStream.toInputStream, streamType)
             }
           else
             times(experiment) += time {
               desJena(
-                serialized.toInputStream,
+                outputStream.toInputStream,
                 getJenaFormat(experiment, streamType).get,
                 streamType
               )

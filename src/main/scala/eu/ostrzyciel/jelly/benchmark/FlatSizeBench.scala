@@ -1,9 +1,9 @@
 package eu.ostrzyciel.jelly.benchmark
 
 import com.google.common.io.CountingOutputStream
-import eu.ostrzyciel.jelly.benchmark.traits.FlatSerDes
+import eu.ostrzyciel.jelly.benchmark.traits.*
 import eu.ostrzyciel.jelly.benchmark.util.*
-import eu.ostrzyciel.jelly.convert.jena.riot.JellyLanguage
+import eu.ostrzyciel.jelly.convert.jena.riot.*
 import org.apache.commons.compress.compressors.zstandard.ZstdCompressorOutputStream
 import org.apache.commons.io.output.NullOutputStream
 import org.apache.jena.graph.Triple
@@ -22,7 +22,7 @@ import scala.collection.mutable
 import scala.concurrent.duration.*
 import scala.concurrent.{Await, Future}
 
-object FlatSizeBench extends FlatSerDes:
+object FlatSizeBench extends FlatSerDes, Size:
   import eu.ostrzyciel.jelly.benchmark.util.Experiments.*
   import eu.ostrzyciel.jelly.benchmark.util.Util.*
 
@@ -84,7 +84,7 @@ object FlatSizeBench extends FlatSerDes:
       .run()
     val rdf4jResultFutures = getRdf4jSinks.map(s => rdf4jHub.runWith(s))
 
-    val results = Await.result(Future.sequence(resultFutures ++ rdf4jResultFutures), 4.hours)
+    val results = Await.result(Future.sequence(resultFutures ++ rdf4jResultFutures), 24.hours)
     results.foreach { case (expName, size, count) =>
       println(f"Experiment $expName: $size bytes, $count elements")
       sizes.updateWith(expName)(_.map(_ + size).orElse(Some(size)))
@@ -100,14 +100,14 @@ object FlatSizeBench extends FlatSerDes:
       val expName = experiment + compressionMode.fold("")(f"-$compressionMethod-" + _)
       val (os, cos) = getOs(compressionMethod, compressionMode)
       val context = RIOT.getContext.copy()
-      val lang = if experiment.startsWith("jelly") then
+      val format = if experiment.startsWith("jelly") then
         val opts = getJellyOpts(experiment, streamType, grouped = false)
         context.set(JellyLanguage.SYMBOL_STREAM_OPTIONS, opts)
           .set(JellyLanguage.SYMBOL_FRAME_SIZE, 512)
-        JellyLanguage.JELLY
+        JellyFormat.JELLY_SMALL_STRICT // this gets overridden by the context
       else
-        getJenaFormat(experiment, streamType).get.getLang
-      val writer = StreamRDFWriter.getWriterStream(os, lang, context)
+        getJenaFormat(experiment, streamType).get
+      val writer = StreamRDFWriter.getWriterStream(os, format, context)
       writer.start()
       Flow[T]
         .map {
@@ -148,15 +148,3 @@ object FlatSizeBench extends FlatSerDes:
           os.close()
           (expName, cos.getCount, counter)
         }))
-
-  private def getOs(method: String, mode: Option[String]): (OutputStream, CountingOutputStream) =
-    val cos = new CountingOutputStream(NullOutputStream.INSTANCE)
-    if mode.isDefined then
-      (reWrapOs(method, cos), cos)
-    else (cos, cos)
-
-  private def reWrapOs(method: String, cos: OutputStream): OutputStream =
-    if method == "gzip" then new GZIPOutputStream(cos)
-    else if method == "zstd3" then new ZstdCompressorOutputStream(cos, 3)
-    else if method == "zstd9" then new ZstdCompressorOutputStream(cos, 9)
-    else cos

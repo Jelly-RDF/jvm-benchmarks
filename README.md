@@ -1,12 +1,12 @@
 # jvm-benchmarks
 
-Benchmarks for Jelly-JVM using Apache Jena.
+Benchmarks for Jelly-JVM using Apache Jena and RDF4J.
 
 **See the [Jelly website](https://w3id.org/jelly) for more information about Jelly and documentation.**
 
 ## Prerequisites
 
-You need at least Java 17 to compile the benchmark code. To run the benchmarks, we **strongly recommend** using the latest stable version a modern JDK, preferably GraalVM. In our benchmarks we used Oracle GraalVM 23.0.1+11.1.
+You need at least Java 17 to compile the benchmark code. To run the benchmarks, we **strongly recommend** using the latest stable version of a modern JRE, preferably GraalVM in JIT mode.
 
 This code was tested only on Linux. It may work on other platforms, but this wasn't tested.
 
@@ -41,27 +41,33 @@ The `scripts` directory contains scripts that automate running the benchmarks.
 
 The scripts assume you are using the `stream-mixed-rdfstar` profile of RiverBench – if you are using a different profile, you will need to modify the `DATASETS` variable in the scripts accordingly. Same goes for any changes to benchmark parameters.
 
-- `./scripts/size.sh [path-to-java-executable] [path-to-benchmark-jar] [directory-with-datasets]`
-  - Runs the serialization size benchmark.
+- `./scripts/flat_size.sh [path-to-java-executable] [path-to-benchmark-jar] [directory-with-datasets]`
+  - Runs the serialization size benchmark for flat RDF streams (streams of triples/quads). This benchmark runs with both Jena and RDF4J.
   - `[path-to-java-executable]` is the path to the Java executable to use. For example: `/usr/bin/java`.
   - `[path-to-benchmark-jar]` is the path to the compiled benchmark JAR (see: [Compiling](#compiling)).
   - `[directory-with-datasets]` is the directory with the downloaded datasets (see: [Downloading the datasets](#downloading-the-datasets)).
+- `./scripts/grouped_size.sh [path-to-java-executable] [path-to-benchmark-jar] [directory-with-datasets]`
+  - Runs the serialization size benchmark for grouped RDF streams (streams of graphs/datasets). This benchmark runs with both Jena and RDF4J.
 - `./scripts/flat_ser_des.sh [path-to-java-executable] [path-to-benchmark-jar] [directory-with-datasets]`
-  - Runs the serialization/deserialization speed benchmark for flat RDF streams (streams of RDF triples or quads).
+  - Runs the serialization/deserialization throughput benchmark for flat RDF streams (streams of RDF triples or quads). This benchmark runs only with Jena.
+- `./scripts/flat_ser_des_rdf4j.sh [path-to-java-executable] [path-to-benchmark-jar] [directory-with-datasets]`
+  - Runs the serialization/deserialization throughput benchmark for flat RDF streams (streams of RDF triples or quads). This benchmark runs only with RDF4J.
 - `./scripts/grouped_ser_des.sh [path-to-java-executable] [path-to-benchmark-jar] [directory-with-datasets]`
-  - Runs the serialization/deserialization speed benchmark for grouped RDF streams (streams of RDF graphs or datasets).
+  - Runs the serialization/deserialization speed benchmark for grouped RDF streams (streams of RDF graphs or datasets). This benchmark runs only with Jena.
+- `./scripts/grouped_ser_des_rdf4j.sh [path-to-java-executable] [path-to-benchmark-jar] [directory-with-datasets]`
+  - Runs the serialization/deserialization speed benchmark for grouped RDF streams (streams of RDF graphs or datasets). This benchmark runs only with RDF4J.
 - `./scripts/grpc_throughput.sh [path-to-java-executable] [path-to-benchmark-jar] [directory-with-datasets] [server-port]`
-  - Runs the end-to-end throughput benchmark using gRPC.
+  - Runs the end-to-end throughput benchmark using gRPC, on Jena.
   - If you want to emulate specific network conditions for your benchmark (e.g., limited bandwidth, increased latency), see the section on network emulation below.
   - `[server-port]` is the port on which the gRPC server will listen and the gRPC client will connect to. If you want to use network emulation, set this to a port that you have configured in the network emulation script.
 - `./scripts/grpc_latency.sh [path-to-java-executable] [path-to-benchmark-jar] [directory-with-datasets] [server-port]`
-  - Runs the end-to-end latency benchmark using gRPC.
+  - Runs the end-to-end latency benchmark using gRPC, on Jena.
 - `./scripts/kafka_throughput.sh [path-to-java-executable] [path-to-benchmark-jar] [directory-with-datasets] [broker-port-for-producer] [broker-port-for-consumer]`
-  - Runs the end-to-end throughput benchmark using Apache Kafka.
+  - Runs the end-to-end throughput benchmark using Apache Kafka, on Jena.
   - This script requires a running Kafka cluster. See the section on running Kafka below.
   - `[kafka-broker-port]` is the port on which the Kafka broker is listening. If you want to use network emulation, set this to a port that you have configured in the network emulation script.
 - `./scripts/kafka_latency.sh [path-to-java-executable] [path-to-benchmark-jar] [directory-with-datasets] [broker-port-for-producer] [broker-port-for-consumer]`
-  - Runs the end-to-end latency benchmark using Apache Kafka.
+  - Runs the end-to-end latency benchmark using Apache Kafka, on Jena.
   - This script requires a running Kafka cluster. See the section on running Kafka below. 
 
 ### Running Kafka
@@ -74,9 +80,9 @@ To emulate specific network conditions in gRPC and Kafka benchmarks, you can use
 
 In our benchmarks we used the following configuration:
 
-- Port 9092: no emulation
-- Port 9093: 100 Mbit/s bandwidth, 10 ms latency
-- Port 9094: 50 Mbit/s bandwidth, 15 ms latency
+- Ports 9092 and 8420: no emulation
+- Ports 9093 and 8421: 100 Mbit/s bandwidth, 10 ms latency
+- Ports 9094 and 8422: 50 Mbit/s bandwidth, 15 ms latency
 
 #### Enable netem (needs root privileges)
 

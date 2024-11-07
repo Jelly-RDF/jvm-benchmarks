@@ -31,8 +31,8 @@ object GroupedSerDesRdf4jBench extends GroupedSerDes:
         "task" -> task,
         "streamType" -> streamType,
         "elementSize" -> elementSize,
-        "elements" -> numElements,
-        "statements" -> numStatements,
+        "elements" -> numElementsRdf4j,
+        "statements" -> numStatementsRdf4j,
       ))
 
     if taskSeq.contains("ser") then

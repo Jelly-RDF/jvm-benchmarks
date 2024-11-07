@@ -1,5 +1,7 @@
 package eu.ostrzyciel.jelly.benchmark.util
 
+import eu.ostrzyciel.jelly.convert.rdf4j.rdf4jConverterFactory
+import eu.ostrzyciel.jelly.core.JellyOptions
 import eu.ostrzyciel.jelly.stream.{DecoderFlow, JellyIo}
 import org.apache.commons.compress.archivers.tar.TarArchiveInputStream
 import org.apache.commons.io.IOUtils
@@ -13,6 +15,7 @@ import org.apache.pekko.actor.typed.ActorSystem
 import org.apache.pekko.stream.*
 import org.apache.pekko.stream.scaladsl.*
 import org.apache.pekko.util.ByteString
+import org.eclipse.rdf4j.model.Statement
 
 import java.io.FileInputStream
 import java.util.zip.GZIPInputStream
@@ -48,6 +51,20 @@ object DataLoader:
     else
       val items = Await.result(readFuture, 3.hours).asInstanceOf[Seq[DatasetGraph]]
       (items.map(_.asQuads.size).sum, items.size, Right(items))
+
+  /**
+   * @param path        path to the source file
+   * @param elementSize number of statements in a single chunk – set to 0 to disable chunking
+   * @param elements    number of elements to process or None to process all
+   * @return (numStatements, numElements, elements)
+   */
+  def getSourceDataRdf4j(path: String, elementSize: Int, elements: Option[Int])(using ActorSystem[_]):
+  (Long, Long, GroupedDataRdf4j) =
+    val source = jellySourceRdf4j(path, elementSize, elements)
+    println("Loading the source file...")
+    val readFuture = source.runWith(Sink.seq)
+    val items = Await.result(readFuture, 3.hours)
+    (items.map(_.size).sum, items.size, items)
 
   /**
    * @param path        path to the source file
@@ -142,22 +159,56 @@ object DataLoader:
         })
         .via(if elements.isDefined then Flow[DatasetGraph].take(elements.get) else Flow[DatasetGraph])
 
+  /**
+   * @param path        path to the source file
+   * @param elementSize number of statements in a single chunk – set to 0 to disable chunking
+   * @param elements    number of elements to process or None to process all
+   * @return Pekko Source of RDF4J statement groups
+   */
+  def jellySourceRdf4j(path: String, elementSize: Int, elements: Option[Int])(using ActorSystem[_]):
+  GroupedDataStreamRdf4j =
+    val is = GZIPInputStream(FileInputStream(path))
+    val s = JellyIo.fromIoStream(is)
+      .via(DecoderFlow.decodeAny.asGroupedStream(JellyOptions.defaultSupportedOptions)(using rdf4jConverterFactory))
+    (if elementSize == 0 then s else s.mapConcat(identity).grouped(elementSize))
+      .map(it => it.toSeq)
+      .via(if elements.isDefined then Flow[Seq[Statement]].take(elements.get) else Flow[Seq[Statement]])
+  
+  def jellySourceFlat(path: String, streamType: String, statements: Option[Int]): FlatDataStream =
+    val is = GZIPInputStream(FileInputStream(path))
+    val s = JellyIo.fromIoStream(is)
+    if streamType == "triples" then
+      val s2 = s.via(DecoderFlow.decodeTriples.asFlatTripleStream)
+        .via(if statements.isDefined then Flow[Triple].take(statements.get) else Flow[Triple])
+      Left(s2)
+    else
+      val s2 = s.via(DecoderFlow.decodeQuads.asFlatQuadStream)
+        .via(if statements.isDefined then Flow[Quad].take(statements.get) else Flow[Quad])
+      Right(s2)
+      
+  def jellySourceRdf4jFlat(path: String, statements: Option[Int]): FlatDataStreamRdf4j =
+    val is = GZIPInputStream(FileInputStream(path))
+    JellyIo.fromIoStream(is)
+      .via(DecoderFlow.decodeAny.asFlatStream(JellyOptions.defaultSupportedOptions)(using rdf4jConverterFactory))
+      .via(if statements.isDefined then Flow[Statement].take(statements.get) else Flow[Statement])
 
   def getSourceDataJellyFlat(path: String, streamType: String, statements: Option[Int])
                             (using ActorSystem[_], ExecutionContext): 
   Either[Seq[Triple], Seq[Quad]] =
     println("Loading the source file...")
-    val is = GZIPInputStream(FileInputStream(path))
-    val s = JellyIo.fromIoStream(is)
-    val future = if streamType == "triples" then
-      s.via(DecoderFlow.decodeTriples.asFlatTripleStream)
-        .via(if statements.isDefined then Flow[Triple].take(statements.get) else Flow[Triple])
-        .runWith(Sink.seq)
-        .map(ts => Left(ts))
-    else
-      s.via(DecoderFlow.decodeQuads.asFlatQuadStream)
-        .via(if statements.isDefined then Flow[Quad].take(statements.get) else Flow[Quad])
-        .runWith(Sink.seq)
-        .map(qs => Right(qs))
+    val s = jellySourceFlat(path, streamType, statements)
+    val future = s match
+      case Left(s2) =>
+        s2.runWith(Sink.seq)
+          .map(ts => Left(ts))
+      case Right(s2) =>
+        s2.runWith(Sink.seq)
+          .map(qs => Right(qs))
+    Await.result(future, 3.hours)
 
+  def getSourceDataJellyRdf4jFlat(path: String, statements: Option[Int])(using ActorSystem[_], ExecutionContext):
+  Seq[Statement] =
+    println("Loading the source file...")
+    val s = jellySourceRdf4jFlat(path, statements)
+    val future = s.runWith(Sink.seq)
     Await.result(future, 3.hours)

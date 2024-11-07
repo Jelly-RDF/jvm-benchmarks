@@ -23,7 +23,7 @@ trait Networked:
 
   protected final def initExperiments(streamType: String, useJena: Boolean): Unit =
     experiments = Experiments.getFormatKeysToTest(
-      jena = useJena, jenaStreaming = useJena, jelly = true,
+      jena = useJena, jenaStreaming = useJena, jelly = true, rdf4j = false,
       streamType = streamType
     )
     this.streamType = streamType

@@ -4,10 +4,11 @@ ThisBuild / scalaVersion := "3.3.4"
 resolvers +=
   "Sonatype OSS Snapshots" at "https://s01.oss.sonatype.org/content/repositories/snapshots"
 
-// val jellyV = "2.2.1"
-val jellyV = "2.2.1+11-71065314-SNAPSHOT"
+val jellyV = "2.5.0"
 val jenaV = "5.2.0"
-val rdf4jV = "5.0.2"
+val rdf4jV = "5.1.0"
+lazy val pekkoV = "1.1.2"
+lazy val pekkoGrpcV = "1.1.1"
 
 lazy val root = (project in file("."))
   .settings(
@@ -20,6 +21,10 @@ lazy val root = (project in file("."))
       "org.json4s" %% "json4s-jackson" % "4.0.7",
       "org.apache.jena" % "jena-core" % jenaV,
       "org.apache.jena" % "jena-arq" % jenaV,
+      "org.apache.pekko" %% "pekko-actor-typed" % pekkoV,
+      "org.apache.pekko" %% "pekko-discovery" % pekkoV,
+      "org.apache.pekko" %% "pekko-grpc-runtime" % pekkoGrpcV,
+      "org.apache.pekko" %% "pekko-stream-typed" % pekkoV,
       "org.apache.pekko" %% "pekko-connectors-kafka" % "1.1.0",
       "org.apache.commons" % "commons-compress" % "1.27.1",
       "org.eclipse.rdf4j" % "rdf4j" % rdf4jV,

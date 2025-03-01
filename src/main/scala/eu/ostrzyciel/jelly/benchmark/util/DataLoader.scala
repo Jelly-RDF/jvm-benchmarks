@@ -100,7 +100,7 @@ object DataLoader:
       GZIPInputStream(FileInputStream(path))
     )
     val tarIterator = Iterator
-      .continually(is.getNextTarEntry)
+      .continually(is.getNextEntry)
       .takeWhile(_ != null)
       .filter(is.canReadEntryData)
       .filter(_.isFile)
@@ -171,7 +171,7 @@ object DataLoader:
     val s = JellyIo.fromIoStream(is)
       .via(DecoderFlow.decodeAny.asGroupedStream(JellyOptions.defaultSupportedOptions)(using rdf4jConverterFactory))
     (if elementSize == 0 then s else s.mapConcat(identity).grouped(elementSize))
-      .map(it => it.toSeq)
+      .map(it => it.iterator.toSeq)
       .via(if elements.isDefined then Flow[Seq[Statement]].take(elements.get) else Flow[Seq[Statement]])
   
   def jellySourceFlat(path: String, streamType: String, statements: Option[Int]): FlatDataStream =

@@ -70,7 +70,9 @@ trait GroupedSerDes extends SerDes:
   
   protected final def serJelly(opt: RdfStreamOptions, closure: RdfStreamFrame => Unit): Unit =
     val buffer = ListBuffer.empty[RdfStreamRow]
-    val encoder = JenaConverterFactory.encoder(opt, false, Some(buffer))
+    val encoder = JenaConverterFactory.encoder(ProtoEncoder.Params(
+      opt, false, Some(buffer)
+    ))
     sourceData match
       case Left(models) =>
         models.map(m => triplesToFrame(buffer, encoder, m.asTriples)).foreach(closure)
@@ -82,7 +84,9 @@ trait GroupedSerDes extends SerDes:
 
   protected final def serJellyRdf4j(opt: RdfStreamOptions, closure: RdfStreamFrame => Unit): Unit =
     val buffer = ListBuffer.empty[RdfStreamRow]
-    val encoder = Rdf4jConverterFactory.encoder(opt, false, Some(buffer))
+    val encoder = Rdf4jConverterFactory.encoder(ProtoEncoder.Params(
+      opt, false, Some(buffer)
+    ))
     if opt.physicalType.isTriples then
       sourceDataRdf4j.map(triples => triplesToFrame(buffer, encoder, triples)).foreach(closure)
     else if opt.physicalType.isQuads then

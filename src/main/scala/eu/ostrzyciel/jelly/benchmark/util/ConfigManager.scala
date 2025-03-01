@@ -34,12 +34,16 @@ object ConfigManager:
     val jena: Seq[String] = config.getString("jelly.enabled-formats.jena")
       .split(',')
       .map(_.trim.prependedAll("jena-"))
+      .toSeq
     val jenaStreaming: Seq[String] = config.getString("jelly.enabled-formats.jena-streaming")
       .split(',')
       .map(_.trim.prependedAll("jena-"))
+      .toSeq
     val jelly: Seq[String] = config.getString("jelly.enabled-formats.jelly")
       .split(',')
       .map(_.trim.prependedAll("jelly-"))
+      .toSeq
     val rdf4j: Seq[String] = config.getString("jelly.enabled-formats.rdf4j")
       .split(',')
       .map(_.trim.prependedAll("rdf4j-"))
+      .toSeq

@@ -55,11 +55,17 @@ trait Kafka extends Networked:
     if experiment.startsWith("jelly") then
       val opt = getJellyOpts(experiment, streamType, grouped = true)
       val encoderFlow: Flow[ModelOrDataset, RdfStreamFrame, NotUsed] = if streamType == "triples" then
-        Flow[ModelOrDataset].map(_.asInstanceOf[Model].asTriples).via(EncoderFlow.graphStream(None, opt))
+        Flow[ModelOrDataset]
+          .map(_.asInstanceOf[Model].asTriples)
+          .via(EncoderFlow.builder.graphs(opt).flow)
       else if streamType == "quads" then
-        Flow[ModelOrDataset].map(_.asInstanceOf[DatasetGraph].asQuads).via(EncoderFlow.datasetStreamFromQuads(None, opt))
+        Flow[ModelOrDataset]
+          .map(_.asInstanceOf[DatasetGraph].asQuads)
+          .via(EncoderFlow.builder.datasetsFromQuads(opt).flow)
       else
-        Flow[ModelOrDataset].map(_.asInstanceOf[DatasetGraph].asGraphs).via(EncoderFlow.datasetStream(None, opt))
+        Flow[ModelOrDataset]
+          .map(_.asInstanceOf[DatasetGraph].asGraphs)
+          .via(EncoderFlow.builder.datasets(opt).flow)
       encoderFlow.map(frame => {
         val (bos, os) = outputStream()
         frame.writeTo(os)

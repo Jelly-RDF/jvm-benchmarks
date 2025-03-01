@@ -24,16 +24,16 @@ class RdfStreamServiceFromData(data: GroupedData)
         .map(_.asTriples)
         // Don't do this in production... here we simply use the options requested by the client.
         // Throw exception if the client didn't send their options.
-        .via(EncoderFlow.graphStream(None, options))
+        .via(EncoderFlow.builder.graphs(options).flow)
       case Right(datasets) => options.physicalType match
         case PhysicalStreamType.QUADS =>
           source(datasets)
             .map(_.asQuads)
-            .via(EncoderFlow.datasetStreamFromQuads(None, options))
+            .via(EncoderFlow.builder.datasetsFromQuads(options).flow)
         case PhysicalStreamType.GRAPHS =>
           source(datasets)
             .map(_.asGraphs)
-            .via(EncoderFlow.datasetStream(None, options))
+            .via(EncoderFlow.builder.datasets(options).flow)
         case _ => throw new IllegalArgumentException("Only QUADS and GRAPHS are supported")
 
   override def publishRdf(in: Source[RdfStreamFrame, NotUsed]): Future[RdfStreamReceived] =

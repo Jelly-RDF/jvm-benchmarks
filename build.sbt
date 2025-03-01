@@ -4,10 +4,10 @@ ThisBuild / scalaVersion := "3.3.4"
 resolvers +=
   "Sonatype OSS Snapshots" at "https://s01.oss.sonatype.org/content/repositories/snapshots"
 
-val jellyV = "2.5.0"
-val jenaV = "5.2.0"
-val rdf4jV = "5.1.0"
-lazy val pekkoV = "1.1.2"
+val jellyV = "2.6.4+10-838eb4cf-SNAPSHOT"
+val jenaV = "5.3.0"
+val rdf4jV = "5.1.2"
+lazy val pekkoV = "1.1.3"
 lazy val pekkoGrpcV = "1.1.1"
 
 lazy val root = (project in file("."))
@@ -40,4 +40,7 @@ lazy val root = (project in file("."))
       case PathList("reference.conf") => MergeStrategy.concat
       case _ => MergeStrategy.first
     },
+    scalacOptions ++= Seq(
+      "-deprecation",
+    )
   )

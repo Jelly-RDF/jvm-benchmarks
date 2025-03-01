@@ -128,5 +128,4 @@ trait GroupedSerDes extends SerDes:
       case "graphs" => factory.graphsDecoder(None)
     input
       .map(RdfStreamFrame.parseFrom)
-      .map(frame => frame.rows.map(decoder.ingestRow).foreach(_ => {}))
-      .foreach(_ => {})
+      .foreach(frame => frame.rows.foreach(decoder.ingestRowFlat))

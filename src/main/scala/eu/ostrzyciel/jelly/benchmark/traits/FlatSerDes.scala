@@ -49,8 +49,7 @@ trait FlatSerDes extends SerDes:
       case "quads" => JenaConverterFactory.quadsDecoder(None)
     Iterator.continually(RdfStreamFrame.parseDelimitedFrom(inputStream))
       .takeWhile(_.isDefined)
-      .map(frame => frame.get.rows.map(decoder.ingestRow).foreach(_ => {}))
-      .foreach(_ => {})
+      .foreach(frame => frame.get.rows.foreach(decoder.ingestRowFlat))
 
   protected final def desJellyRdf4j(inputStream: InputStream, streamType: String): Unit =
     val decoder = streamType match
@@ -58,5 +57,4 @@ trait FlatSerDes extends SerDes:
       case "quads" => Rdf4jConverterFactory.quadsDecoder(None)
     Iterator.continually(RdfStreamFrame.parseDelimitedFrom(inputStream))
       .takeWhile(_.isDefined)
-      .map(frame => frame.get.rows.map(decoder.ingestRow).foreach(_ => {}))
-      .foreach(_ => {})
+      .foreach(frame => frame.get.rows.foreach(decoder.ingestRowFlat))

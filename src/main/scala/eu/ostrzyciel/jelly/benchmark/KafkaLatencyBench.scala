@@ -26,7 +26,7 @@ object KafkaLatencyBench extends Kafka:
    */
   @main
   def runKafkaLatencyBench(gzip: Boolean, streamType: String, sourceFilePath: String): Unit =
-    given ActorSystem[_] = serverSystem
+    given ActorSystem[?] = serverSystem
     given ExecutionContext = serverSystem.executionContext
 
     initExperiments(streamType, useJena = true)

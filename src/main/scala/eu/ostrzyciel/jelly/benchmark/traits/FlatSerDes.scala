@@ -11,12 +11,13 @@ import org.eclipse.rdf4j.rio
 import org.eclipse.rdf4j.rio.WriterConfig
 
 import java.io.{InputStream, OutputStream}
+import scala.compiletime.uninitialized
 
 trait FlatSerDes extends SerDes:
-  protected var numStatements: Long = _
-  protected var numStatementsRdf4j: Long = _
-  protected var sourceData: FlatData = _
-  protected var sourceDataRdf4j: FlatDataRdf4j = _
+  protected var numStatements: Long = uninitialized
+  protected var numStatementsRdf4j: Long = uninitialized
+  protected var sourceData: FlatData = uninitialized
+  protected var sourceDataRdf4j: FlatDataRdf4j = uninitialized
 
   protected final def loadData(path: String, streamType: String, statements: Int): Unit =
     val d = DataLoader.getSourceDataJellyFlat(path, streamType, if statements == 0 then None else Some(statements))

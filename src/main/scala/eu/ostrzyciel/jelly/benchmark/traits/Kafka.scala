@@ -18,6 +18,7 @@ import org.apache.pekko.stream.scaladsl.*
 
 import java.io.{ByteArrayInputStream, ByteArrayOutputStream, InputStream, OutputStream}
 import java.util.zip.{GZIPInputStream, GZIPOutputStream}
+import scala.compiletime.uninitialized
 import scala.jdk.CollectionConverters.*
 
 trait Kafka extends Networked:
@@ -34,7 +35,7 @@ trait Kafka extends Networked:
   protected final def isForbiddenCombination(expName: String, dataset: String): Boolean =
     forbiddenCombinations.exists((pExp, pDataset) => expName.contains(pExp) && dataset.contains(pDataset))
 
-  protected final var useGzip: Boolean = _
+  protected final var useGzip: Boolean = uninitialized
 
   protected final val prodSettings: ProducerSettings[String, Array[Byte]] = ProducerSettings(serverSystem, new StringSerializer, new ByteArraySerializer)
     .withProperty(ProducerConfig.RETRIES_CONFIG, "1000000")

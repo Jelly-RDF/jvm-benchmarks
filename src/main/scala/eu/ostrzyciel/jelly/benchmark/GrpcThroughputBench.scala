@@ -11,6 +11,7 @@ import org.apache.pekko.grpc.GrpcClientSettings
 import org.apache.pekko.stream.scaladsl.*
 
 import scala.collection.mutable.ArrayBuffer
+import scala.compiletime.uninitialized
 import scala.concurrent.duration.*
 import scala.concurrent.{Await, ExecutionContext, Future}
 
@@ -19,9 +20,9 @@ object GrpcThroughputBench extends Networked:
   import eu.ostrzyciel.jelly.benchmark.util.Util.*
   import eu.ostrzyciel.jelly.convert.jena.given
 
-  private var t0client: Map[String, ArrayBuffer[Long]] = _
-  private var t0server: Map[String, ArrayBuffer[Long]] = _
-  private var t1client: Map[String, ArrayBuffer[Long]] = _
+  private var t0client: Map[String, ArrayBuffer[Long]] = uninitialized
+  private var t0server: Map[String, ArrayBuffer[Long]] = uninitialized
+  private var t1client: Map[String, ArrayBuffer[Long]] = uninitialized
 
   case class StreamResult(t0client: Long, t0server: Long, t1client: Long):
     def time: Long = t1client - t0server
@@ -34,7 +35,7 @@ object GrpcThroughputBench extends Networked:
    */
   @main
   def runGrpcThroughputBench(gzip: Boolean, streamType: String, elements: Int, sourceFilePath: String): Unit =
-    given ActorSystem[_] = serverSystem
+    given ActorSystem[?] = serverSystem
     given ExecutionContext = serverSystem.executionContext
 
     initExperiments(streamType, useJena = false)
@@ -63,7 +64,7 @@ object GrpcThroughputBench extends Networked:
     }
 
   private def runClient(gzip: Boolean): Unit =
-    given ActorSystem[_] = clientSystem
+    given ActorSystem[?] = clientSystem
     given ExecutionContext = clientSystem.executionContext
 
     val settings = GrpcClientSettings.fromConfig("jelly-rdf-client")
@@ -96,7 +97,7 @@ object GrpcThroughputBench extends Networked:
     sys.exit()
 
   private def request(client: RdfStreamServiceClient, opt: RdfStreamOptions, expName: String)
-    (using ExecutionContext, ActorSystem[_]):
+    (using ExecutionContext, ActorSystem[?]):
   Future[Unit] =
     System.gc()
     println("Sleeping 5 seconds...")

@@ -33,7 +33,7 @@ object DataLoader:
    * @param elements    number of elements to process or None to process all
    * @return (numStatements, numElements, elements)
    */
-  def getSourceData(path: String, streamType: String, elementSize: Int, elements: Option[Int])(using ActorSystem[_]):
+  def getSourceData(path: String, streamType: String, elementSize: Int, elements: Option[Int])(using ActorSystem[?]):
   (Long, Long, GroupedData) =
     val source = if path.endsWith(".jelly.gz") then
       jellySource(path, streamType, elementSize, elements)
@@ -58,7 +58,7 @@ object DataLoader:
    * @param elements    number of elements to process or None to process all
    * @return (numStatements, numElements, elements)
    */
-  def getSourceDataRdf4j(path: String, elementSize: Int, elements: Option[Int])(using ActorSystem[_]):
+  def getSourceDataRdf4j(path: String, elementSize: Int, elements: Option[Int])(using ActorSystem[?]):
   (Long, Long, GroupedDataRdf4j) =
     val source = jellySourceRdf4j(path, elementSize, elements)
     println("Loading the source file...")
@@ -74,7 +74,7 @@ object DataLoader:
    * @return Pekko Source of models or dataset graphs
    */
   def getSourceDataAsStream(path: String, streamType: String, elementSize: Int, elements: Option[Int])
-                           (using ActorSystem[_]):
+                           (using ActorSystem[?]):
   GroupedDataStream =
     val source = if path.endsWith(".jelly.gz") then
       jellySource(path, streamType, elementSize, elements)
@@ -93,7 +93,7 @@ object DataLoader:
    * @return Pekko Source of models or dataset graphs
    */
   def tarGzSource(path: String, streamType: String, elementSize: Int, elements: Option[Int])
-                 (using ActorSystem[_]):
+                 (using ActorSystem[?]):
   Source[Model | DatasetGraph, NotUsed] =
     val lang = if streamType == "triples" then Lang.TTL else Lang.TRIG
     val is = TarArchiveInputStream(
@@ -135,7 +135,7 @@ object DataLoader:
    * @return Pekko Source of models or dataset graphs
    */
   def jellySource(path: String, streamType: String, elementSize: Int, elements: Option[Int])
-                 (using ActorSystem[_]):
+                 (using ActorSystem[?]):
   Source[Model | DatasetGraph, NotUsed] =
     val is = GZIPInputStream(FileInputStream(path))
     if streamType == "triples" then
@@ -165,7 +165,7 @@ object DataLoader:
    * @param elements    number of elements to process or None to process all
    * @return Pekko Source of RDF4J statement groups
    */
-  def jellySourceRdf4j(path: String, elementSize: Int, elements: Option[Int])(using ActorSystem[_]):
+  def jellySourceRdf4j(path: String, elementSize: Int, elements: Option[Int])(using ActorSystem[?]):
   GroupedDataStreamRdf4j =
     val is = GZIPInputStream(FileInputStream(path))
     val s = JellyIo.fromIoStream(is)
@@ -193,7 +193,7 @@ object DataLoader:
       .via(if statements.isDefined then Flow[Statement].take(statements.get) else Flow[Statement])
 
   def getSourceDataJellyFlat(path: String, streamType: String, statements: Option[Int])
-                            (using ActorSystem[_], ExecutionContext): 
+                            (using ActorSystem[?], ExecutionContext):
   Either[Seq[Triple], Seq[Quad]] =
     println("Loading the source file...")
     val s = jellySourceFlat(path, streamType, statements)
@@ -206,7 +206,7 @@ object DataLoader:
           .map(qs => Right(qs))
     Await.result(future, 3.hours)
 
-  def getSourceDataJellyRdf4jFlat(path: String, statements: Option[Int])(using ActorSystem[_], ExecutionContext):
+  def getSourceDataJellyRdf4jFlat(path: String, statements: Option[Int])(using ActorSystem[?], ExecutionContext):
   Seq[Statement] =
     println("Loading the source file...")
     val s = jellySourceRdf4jFlat(path, statements)

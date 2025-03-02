@@ -6,20 +6,21 @@ import org.apache.pekko.actor.typed.ActorSystem
 import org.apache.pekko.actor.typed.scaladsl.Behaviors
 import org.apache.pekko.stream.scaladsl.Sink
 
+import scala.compiletime.uninitialized
 import scala.concurrent.Future
 
 trait Networked:
   protected val config: Config = ConfigManager.config
 
-  protected val serverSystem: ActorSystem[_] = ActorSystem(Behaviors.empty, "StreamServer", config)
-  protected val clientSystem: ActorSystem[_] = ActorSystem(Behaviors.empty, "StreamClient", config)
+  protected val serverSystem: ActorSystem[?] = ActorSystem(Behaviors.empty, "StreamServer", config)
+  protected val clientSystem: ActorSystem[?] = ActorSystem(Behaviors.empty, "StreamClient", config)
 
-  protected var experiments: Seq[String] = _
-  protected var streamType: String = _
-  protected var numElements: Long = _
-  protected var numStatements: Long = _
-  protected var sourceData: GroupedData = _
-  protected var sourceFilePath: String = _
+  protected var experiments: Seq[String] = uninitialized
+  protected var streamType: String = uninitialized
+  protected var numElements: Long = uninitialized
+  protected var numStatements: Long = uninitialized
+  protected var sourceData: GroupedData = uninitialized
+  protected var sourceFilePath: String = uninitialized
 
   protected final def initExperiments(streamType: String, useJena: Boolean): Unit =
     experiments = Experiments.getFormatKeysToTest(

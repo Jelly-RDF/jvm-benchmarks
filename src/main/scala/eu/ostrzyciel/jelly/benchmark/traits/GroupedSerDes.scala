@@ -11,17 +11,18 @@ import org.eclipse.rdf4j.rio
 
 import java.io.OutputStream
 import scala.collection.mutable.ListBuffer
+import scala.compiletime.uninitialized
 
 trait GroupedSerDes extends SerDes:
   import eu.ostrzyciel.jelly.convert.jena.{*, given}
   import eu.ostrzyciel.jelly.convert.rdf4j.Rdf4jConverterFactory
 
-  protected var numElements: Long = _
-  protected var numStatements: Long = _
-  protected var numElementsRdf4j: Long = _
-  protected var numStatementsRdf4j: Long = _
-  protected var sourceData: GroupedData = _
-  protected var sourceDataRdf4j: GroupedDataRdf4j = _
+  protected var numElements: Long = uninitialized
+  protected var numStatements: Long = uninitialized
+  protected var numElementsRdf4j: Long = uninitialized
+  protected var numStatementsRdf4j: Long = uninitialized
+  protected var sourceData: GroupedData = uninitialized
+  protected var sourceDataRdf4j: GroupedDataRdf4j = uninitialized
 
   protected final def loadData(path: String, streamType: String, elementSize: Int, elements: Option[Int]): Unit =
     val d = DataLoader.getSourceData(path, streamType, elementSize, elements)
@@ -124,7 +125,7 @@ trait GroupedSerDes extends SerDes:
   protected final def desJellyRdf4j(input: Iterable[Array[Byte]], streamType: String): Unit =
     desJellyInner(Rdf4jConverterFactory, input, streamType)
 
-  private def desJellyInner(factory: ConverterFactory[_, _, _, _, _, _], input: Iterable[Array[Byte]], streamType: String):
+  private def desJellyInner(factory: ConverterFactory[?, ?, ?, ?, ?, ?], input: Iterable[Array[Byte]], streamType: String):
   Unit =
     val decoder = streamType match
       case "triples" => factory.triplesDecoder(None)

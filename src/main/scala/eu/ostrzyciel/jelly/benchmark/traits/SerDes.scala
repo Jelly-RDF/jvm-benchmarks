@@ -11,6 +11,7 @@ import org.eclipse.rdf4j.rio
 import java.io.InputStream
 import scala.collection.mutable
 import scala.collection.mutable.ArrayBuffer
+import scala.compiletime.uninitialized
 import scala.concurrent.ExecutionContext
 
 trait SerDes:
@@ -19,9 +20,9 @@ trait SerDes:
   )
   protected given ExecutionContext = system.executionContext
 
-  protected var experiments: Seq[String] = _
-  protected var times: Map[String, mutable.ArrayBuffer[Long]] = _
-  protected var streamType: String = _
+  protected var experiments: Seq[String] = uninitialized
+  protected var times: Map[String, mutable.ArrayBuffer[Long]] = uninitialized
+  protected var streamType: String = uninitialized
 
   protected final def initExperiment(flatStreaming: Boolean, jena: Boolean, rdf4j: Boolean, streamType: String): Unit =
     // Only run Jelly for GRAPHS streams – in Jena it's the same as QUADS

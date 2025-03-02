@@ -11,6 +11,7 @@ import org.apache.pekko.stream.scaladsl.*
 import org.apache.pekko.{Done, NotUsed}
 
 import scala.collection.mutable.ArrayBuffer
+import scala.compiletime.uninitialized
 import scala.concurrent.duration.*
 import scala.concurrent.{Await, ExecutionContext, Future}
 
@@ -20,7 +21,7 @@ object KafkaThroughputBench extends Kafka:
   case class KafkaResult(t0cons: Long, t0prod: Long, t1cons: Long, t1prod: Long, bytes: Long):
     def time: Long = t1cons - t0prod
 
-  private var times: Map[String, ArrayBuffer[KafkaResult]] = _
+  private var times: Map[String, ArrayBuffer[KafkaResult]] = uninitialized
 
   /**
    * @param gzip Whether to use gzip compression
@@ -30,7 +31,7 @@ object KafkaThroughputBench extends Kafka:
    */
   @main
   def runKafkaThroughputBench(gzip: Boolean, streamType: String, elements: Int, sourceFilePath: String): Unit =
-    given ActorSystem[_] = serverSystem
+    given ActorSystem[?] = serverSystem
     given ExecutionContext = serverSystem.executionContext
 
     initExperiments(streamType, useJena = true)

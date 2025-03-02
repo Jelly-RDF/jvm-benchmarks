@@ -58,7 +58,7 @@ object GrpcLatencyBench extends Networked:
     val tsClient = new mutable.ArrayBuffer[Long]()
 
     val server = {
-      given ActorSystem[_] = serverSystem
+      given ActorSystem[?] = serverSystem
       val serverOptions = RdfStreamServer.Options(
         host = "127.0.0.1",
         port = config.getInt("pekko.grpc.client.jelly-rdf-client.port"),
@@ -71,7 +71,7 @@ object GrpcLatencyBench extends Networked:
     }
 
     val clientFut: Future[Done] = {
-      given ActorSystem[_] = clientSystem
+      given ActorSystem[?] = clientSystem
       val settings = GrpcClientSettings.fromConfig("jelly-rdf-client")
       val client = RdfStreamServiceClient(settings)
 

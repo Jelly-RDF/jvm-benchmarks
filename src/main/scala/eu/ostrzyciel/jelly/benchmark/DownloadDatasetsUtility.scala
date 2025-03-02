@@ -19,7 +19,7 @@ import scala.jdk.CollectionConverters.*
 
 object DownloadDatasetsUtility:
 
-  given as: ActorSystem[_] = ActorSystem[Nothing](Behaviors.empty, "DownloadDatasetsUtility")
+  given as: ActorSystem[?] = ActorSystem[Nothing](Behaviors.empty, "DownloadDatasetsUtility")
   given ExecutionContext = as.executionContext
 
   val rbBase = "https://w3id.org/riverbench"

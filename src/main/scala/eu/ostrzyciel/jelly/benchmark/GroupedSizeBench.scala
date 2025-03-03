@@ -5,6 +5,7 @@ import eu.ostrzyciel.jelly.benchmark.traits.*
 import eu.ostrzyciel.jelly.benchmark.util.{DataLoader, GroupedDataStream, GroupedDataStreamRdf4j}
 import eu.ostrzyciel.jelly.convert.jena.JenaConverterFactory
 import eu.ostrzyciel.jelly.core.ProtoEncoder
+import eu.ostrzyciel.jelly.core.proto.v1.RdfStreamRow
 import org.apache.commons.compress.compressors.zstandard.ZstdCompressorOutputStream
 import org.apache.commons.io.output.NullOutputStream
 import org.apache.jena.rdf.model.Model
@@ -16,6 +17,7 @@ import org.eclipse.rdf4j.model.Statement
 import java.io.OutputStream
 import java.util.zip.GZIPOutputStream
 import scala.collection.mutable
+import scala.collection.mutable.ListBuffer
 import scala.concurrent.duration.*
 import scala.concurrent.{Await, Future}
 
@@ -105,7 +107,10 @@ object GroupedSizeBench extends GroupedSerDes, Size:
       val individualCompression = compressionMode.isDefined && compressionMode.get == "individual"
       val sink = if experiment.startsWith("jelly") then
         val opts = getJellyOpts(experiment, streamType, grouped = false)
-        val encoder = JenaConverterFactory.encoder(ProtoEncoder.Params(opts))
+        val encoder = JenaConverterFactory.encoder(ProtoEncoder.Params(
+          opts,
+          maybeRowBuffer = Some(ListBuffer[RdfStreamRow]()),
+        ))
         Flow[T].map(m => serJellyOneElement(m, encoder, frame => {
           frame.writeTo(os)
           if individualCompression then

@@ -1,21 +1,16 @@
 package eu.ostrzyciel.jelly.benchmark
 
-import com.google.common.io.CountingOutputStream
 import eu.ostrzyciel.jelly.benchmark.traits.*
 import eu.ostrzyciel.jelly.benchmark.util.{DataLoader, GroupedDataStream, GroupedDataStreamRdf4j}
 import eu.ostrzyciel.jelly.convert.jena.JenaConverterFactory
 import eu.ostrzyciel.jelly.core.ProtoEncoder
 import eu.ostrzyciel.jelly.core.proto.v1.RdfStreamRow
-import org.apache.commons.compress.compressors.zstandard.ZstdCompressorOutputStream
-import org.apache.commons.io.output.NullOutputStream
 import org.apache.jena.rdf.model.Model
 import org.apache.jena.sparql.core.DatasetGraph
 import org.apache.pekko.NotUsed
 import org.apache.pekko.stream.scaladsl.*
 import org.eclipse.rdf4j.model.Statement
 
-import java.io.OutputStream
-import java.util.zip.GZIPOutputStream
 import scala.collection.mutable
 import scala.collection.mutable.ListBuffer
 import scala.concurrent.duration.*

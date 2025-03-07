@@ -4,7 +4,7 @@ ThisBuild / scalaVersion := "3.6.3"
 resolvers +=
   "Sonatype OSS Snapshots" at "https://s01.oss.sonatype.org/content/repositories/snapshots"
 
-val jellyV = "2.6.4+12-2be48ca5-SNAPSHOT"
+val jellyV = "2.7.1+1-e2478133-SNAPSHOT"
 val jenaV = "5.3.0"
 val rdf4jV = "5.1.2"
 lazy val pekkoV = "1.1.3"

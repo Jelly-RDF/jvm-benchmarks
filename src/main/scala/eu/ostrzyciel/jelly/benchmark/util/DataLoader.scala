@@ -193,22 +193,21 @@ object DataLoader:
       .via(if statements.isDefined then Flow[Statement].take(statements.get) else Flow[Statement])
 
   def getSourceDataJellyFlat(path: String, streamType: String, statements: Option[Int])
-                            (using ActorSystem[?], ExecutionContext):
-  Either[Seq[Triple], Seq[Quad]] =
+                            (using ActorSystem[?], ExecutionContext): FlatData =
     println("Loading the source file...")
     val s = jellySourceFlat(path, streamType, statements)
     val future = s match
       case Left(s2) =>
         s2.runWith(Sink.seq)
-          .map(ts => Left(ts))
+          .map(ts => Left(ts.toArray))
       case Right(s2) =>
         s2.runWith(Sink.seq)
-          .map(qs => Right(qs))
+          .map(qs => Right(qs.toArray))
     Await.result(future, 3.hours)
 
   def getSourceDataJellyRdf4jFlat(path: String, statements: Option[Int])(using ActorSystem[?], ExecutionContext):
-  Seq[Statement] =
+  FlatDataRdf4j =
     println("Loading the source file...")
     val s = jellySourceRdf4jFlat(path, statements)
     val future = s.runWith(Sink.seq)
-    Await.result(future, 3.hours)
+    Await.result(future, 3.hours).toArray

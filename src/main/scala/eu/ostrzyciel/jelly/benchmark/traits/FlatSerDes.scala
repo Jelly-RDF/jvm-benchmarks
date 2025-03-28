@@ -33,15 +33,15 @@ trait FlatSerDes extends SerDes:
     val writer = StreamRDFWriter.getWriterStream(outputStream, format, ctx)
     writer.start()
     sourceData match
-      case Left(triples) => triples.foreach(writer.triple)
-      case Right(quads) => quads.foreach(writer.quad)
+      case Left(triples) => FlatSerDesHelper.serJenaTriples(triples, writer)
+      case Right(quads) => FlatSerDesHelper.serJenaQuads(quads, writer)
     writer.finish()
 
   protected final def serRdf4j(format: rio.RDFFormat, config: WriterConfig, outputStream: OutputStream): Unit =
     val writer = rio.Rio.createWriter(format, outputStream)
     writer.setWriterConfig(config)
     writer.startRDF()
-    sourceDataRdf4j.foreach(writer.handleStatement)
+    FlatSerDesHelper.serRdf4j(sourceDataRdf4j, writer)
     writer.endRDF()
 
   protected final def desJelly(inputStream: InputStream, streamType: String): Unit =

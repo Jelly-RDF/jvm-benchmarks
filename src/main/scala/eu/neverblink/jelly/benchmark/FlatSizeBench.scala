@@ -5,7 +5,7 @@ import eu.neverblink.jelly.benchmark.traits.{FlatSerDes, Size}
 import eu.neverblink.jelly.benchmark.util.{DataLoader, FlatDataStream, FlatDataStreamRdf4j, TripleOrQuad}
 import eu.neverblink.jelly.benchmark.traits.*
 import eu.neverblink.jelly.benchmark.util.*
-import eu.ostrzyciel.jelly.convert.jena.riot.*
+import eu.neverblink.jelly.convert.jena.riot.*
 import org.apache.commons.compress.compressors.zstandard.ZstdCompressorOutputStream
 import org.apache.commons.io.output.NullOutputStream
 import org.apache.jena.graph.Triple

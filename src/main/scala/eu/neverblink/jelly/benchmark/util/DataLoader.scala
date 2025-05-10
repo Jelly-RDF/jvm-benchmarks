@@ -1,8 +1,11 @@
 package eu.neverblink.jelly.benchmark.util
 
-import eu.ostrzyciel.jelly.convert.rdf4j.rdf4jConverterFactory
-import eu.ostrzyciel.jelly.core.JellyOptions
-import eu.ostrzyciel.jelly.stream.{DecoderFlow, JellyIo}
+//import eu.neverblink.jelly.convert.rdf4j.rdf4jConverterFactory
+import eu.neverblink.jelly.convert.jena.{JenaConverterFactory, JenaDecoderConverter, JenaEncoderConverter}
+import eu.neverblink.jelly.convert.rdf4j.Rdf4jConverterFactory
+import eu.neverblink.jelly.core.JellyOptions
+import eu.neverblink.jelly.core.utils.TripleEncoder
+import eu.neverblink.jelly.stream.{DecoderFlow, JellyIo}
 import org.apache.commons.compress.archivers.tar.TarArchiveInputStream
 import org.apache.commons.io.IOUtils
 import org.apache.jena.graph.{Graph, GraphMemFactory, Triple}
@@ -24,33 +27,38 @@ import scala.concurrent.{Await, ExecutionContext}
 
 object DataLoader:
   import Util.*
-  import eu.ostrzyciel.jelly.convert.jena.given
 
-  /**
-   * @param path        path to the source file
-   * @param streamType  "triples" or "quads" or "graphs"
-   * @param elementSize number of statements in a single chunk – set to 0 to disable chunking
-   * @param elements    number of elements to process or None to process all
-   * @return (numStatements, numElements, elements)
-   */
-  def getSourceData(path: String, streamType: String, elementSize: Int, elements: Option[Int])(using ActorSystem[?]):
-  (Long, Long, GroupedData) =
-    val source = if path.endsWith(".jelly.gz") then
-      jellySource(path, streamType, elementSize, elements)
-    else
-      tarGzSource(path, streamType, elementSize, elements)
-    println("Loading the source file...")
-    val readFuture = source.runWith(Sink.seq)
-    if streamType == "triples" then
-      val items = Await.result(readFuture, 3.hours).asInstanceOf[Seq[Model]]
-      (
-        items.map(_.size()).sum,
-        items.size,
-        Left(items)
-      )
-    else
-      val items = Await.result(readFuture, 3.hours).asInstanceOf[Seq[DatasetGraph]]
-      (items.map(_.asQuads.size).sum, items.size, Right(items))
+  given JenaConverterFactory = JenaConverterFactory.getInstance()
+  given JenaEncoderConverter = JenaConverterFactory.getInstance().encoderConverter()
+  given JenaDecoderConverter = JenaConverterFactory.getInstance().decoderConverter()
+  
+  val rdf4jConverterFactory = Rdf4jConverterFactory.getInstance()
+
+//  /**
+//   * @param path        path to the source file
+//   * @param streamType  "triples" or "quads" or "graphs"
+//   * @param elementSize number of statements in a single chunk – set to 0 to disable chunking
+//   * @param elements    number of elements to process or None to process all
+//   * @return (numStatements, numElements, elements)
+//   */
+//  def getSourceData(path: String, streamType: String, elementSize: Int, elements: Option[Int])(using ActorSystem[?]):
+//  (Long, Long, GroupedData) =
+//    val source = if path.endsWith(".jelly.gz") then
+//      jellySource(path, streamType, elementSize, elements)
+//    else
+//      tarGzSource(path, streamType, elementSize, elements)
+//    println("Loading the source file...")
+//    val readFuture = source.runWith(Sink.seq)
+//    if streamType == "triples" then
+//      val items = Await.result(readFuture, 3.hours).asInstanceOf[Seq[Model]]
+//      (
+//        items.map(_.size()).sum,
+//        items.size,
+//        Left(items)
+//      )
+//    else
+//      val items = Await.result(readFuture, 3.hours).asInstanceOf[Seq[DatasetGraph]]
+//      (items.map(_.asQuads.size).sum, items.size, Right(items))
 
   /**
    * @param path        path to the source file
@@ -169,7 +177,9 @@ object DataLoader:
   GroupedDataStreamRdf4j =
     val is = GZIPInputStream(FileInputStream(path))
     val s = JellyIo.fromIoStream(is)
-      .via(DecoderFlow.decodeAny.asGroupedStream(JellyOptions.defaultSupportedOptions)(using rdf4jConverterFactory))
+      .via(DecoderFlow.decodeAny.asGroupedStream(JellyOptions.DEFAULT_SUPPORTED_OPTIONS)
+        (using rdf4jConverterFactory, rdf4jConverterFactory.decoderConverter(), rdf4jConverterFactory.decoderConverter())
+      )
     (if elementSize == 0 then s else s.mapConcat(identity).grouped(elementSize))
       .map(it => it.iterator.toSeq)
       .via(if elements.isDefined then Flow[Seq[Statement]].take(elements.get) else Flow[Seq[Statement]])
@@ -189,7 +199,9 @@ object DataLoader:
   def jellySourceRdf4jFlat(path: String, statements: Option[Int]): FlatDataStreamRdf4j =
     val is = GZIPInputStream(FileInputStream(path))
     JellyIo.fromIoStream(is)
-      .via(DecoderFlow.decodeAny.asFlatStream(JellyOptions.defaultSupportedOptions)(using rdf4jConverterFactory))
+      .via(DecoderFlow.decodeAny.asFlatStream(JellyOptions.DEFAULT_SUPPORTED_OPTIONS)
+        (using rdf4jConverterFactory, rdf4jConverterFactory.decoderConverter(), rdf4jConverterFactory.decoderConverter())
+      )
       .via(if statements.isDefined then Flow[Statement].take(statements.get) else Flow[Statement])
 
   def getSourceDataJellyFlat(path: String, streamType: String, statements: Option[Int])

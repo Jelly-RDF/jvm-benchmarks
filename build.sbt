@@ -14,10 +14,11 @@ lazy val root = (project in file("."))
   .settings(
     name := "benchmarks",
     libraryDependencies ++= Seq(
-      "eu.ostrzyciel.jelly" %% "jelly-grpc" % jellyV,
-      "eu.ostrzyciel.jelly" %% "jelly-stream" % jellyV,
-      "eu.ostrzyciel.jelly" %% "jelly-jena" % jellyV,
-      "eu.ostrzyciel.jelly" %% "jelly-rdf4j" % jellyV,
+//      "eu.ostrzyciel.jelly" %% "jelly-grpc" % jellyV,
+//      "eu.ostrzyciel.jelly" %% "jelly-stream" % jellyV,
+//      "eu.ostrzyciel.jelly" %% "jelly-jena" % jellyV,
+//      "eu.ostrzyciel.jelly" %% "jelly-rdf4j" % jellyV,
+      "com.google.protobuf" % "protobuf-java" % "4.30.2",
       "org.json4s" %% "json4s-jackson" % "4.0.7",
       "org.apache.jena" % "jena-core" % jenaV,
       "org.apache.jena" % "jena-arq" % jenaV,

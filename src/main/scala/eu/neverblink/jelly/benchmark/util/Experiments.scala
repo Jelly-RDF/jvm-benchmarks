@@ -1,6 +1,6 @@
 package eu.neverblink.jelly.benchmark.util
 
-import eu.ostrzyciel.jelly.core.proto.v1.*
+import eu.neverblink.jelly.core.proto.v1.*
 import org.apache.jena.riot.RDFFormat
 import org.eclipse.rdf4j.rio
 
@@ -47,4 +47,6 @@ object Experiments:
         PhysicalStreamType.QUADS,
         if grouped then LogicalStreamType.DATASETS else LogicalStreamType.FLAT_QUADS
       )
-    Constants.jellyOptions(exp).copy(physicalType = physType, logicalType = logicType)
+    Constants.jellyOptions(exp).clone
+      .setPhysicalType(physType)
+      .setLogicalType(logicType)

@@ -1,6 +1,6 @@
 package eu.neverblink.jelly.benchmark
 
-import eu.ostrzyciel.jelly.convert.jena.riot.JellyLanguage
+import eu.neverblink.jelly.convert.jena.riot.JellyLanguage
 import org.apache.jena.rdf.model.{Model, ModelFactory}
 import org.apache.jena.riot.RDFDataMgr
 import org.apache.jena.vocabulary.{DCAT, DCTerms}

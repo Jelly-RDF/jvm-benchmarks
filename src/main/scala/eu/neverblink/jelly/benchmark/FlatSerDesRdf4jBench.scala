@@ -2,7 +2,7 @@ package eu.neverblink.jelly.benchmark
 
 import eu.neverblink.jelly.benchmark.traits.FlatSerDes
 import eu.neverblink.jelly.benchmark.util.{ConfigManager, Experiments}
-import eu.ostrzyciel.jelly.convert.rdf4j.rio.{JELLY, JellyWriterSettings}
+import eu.neverblink.jelly.convert.rdf4j.rio.{JellyFormat, JellyWriterSettings}
 import org.apache.commons.io.output.ByteArrayOutputStream
 import org.eclipse.rdf4j.rio.WriterConfig
 
@@ -60,11 +60,10 @@ object FlatSerDesRdf4jBench extends FlatSerDes:
       println(f"Try: $i, experiment: $experiment")
       val outputStream = OutputStream.nullOutputStream
       val (format, config) = if experiment.startsWith("jelly") then (
-        JELLY,
-        JellyWriterSettings.configFromOptions(
-          getJellyOpts(experiment, streamType, grouped = false),
-          jellyFrameSize
-        )
+        JellyFormat.JELLY,
+        JellyWriterSettings.empty()
+          .setFrameSize(jellyFrameSize)
+          .setJellyOptions(getJellyOpts(experiment, streamType, grouped = false))
       ) else (
         getRdf4jFormat(experiment, streamType).get,
         new WriterConfig()
@@ -90,11 +89,10 @@ object FlatSerDesRdf4jBench extends FlatSerDes:
         // It's safer to limit the number of statements to 5M.
         val outputStream = new ByteArrayOutputStream()
         val (format, config) = if experiment.startsWith("jelly") then (
-          JELLY,
-          JellyWriterSettings.configFromOptions(
-            getJellyOpts(experiment, streamType, grouped = false),
-            jellyFrameSize
-          )
+          JellyFormat.JELLY,
+          JellyWriterSettings.empty()
+            .setFrameSize(jellyFrameSize)
+            .setJellyOptions(getJellyOpts(experiment, streamType, grouped = false))
         ) else (
           getRdf4jFormat(experiment, streamType).get,
           new WriterConfig()
@@ -111,7 +109,7 @@ object FlatSerDesRdf4jBench extends FlatSerDes:
           println(f"Try: $i, experiment: $experiment")
           if experiment.startsWith("jelly") then
             times(experiment) += time {
-              desRdf4j(outputStream.toInputStream, JELLY)
+              desRdf4j(outputStream.toInputStream, JellyFormat.JELLY)
             }
           else
             times(experiment) += time {

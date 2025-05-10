@@ -1,6 +1,6 @@
 package eu.neverblink.jelly.benchmark.util
 
-import eu.ostrzyciel.jelly.core.JellyOptions
+import eu.neverblink.jelly.core.JellyOptions
 import org.apache.jena.riot
 import org.eclipse.rdf4j.rio
 
@@ -22,10 +22,10 @@ object Constants:
   )
 
   val jellyOptions = Map(
-    "jelly-big" -> JellyOptions.bigGeneralized,
-    "jelly-big-noprefix" -> JellyOptions.bigGeneralized.withMaxPrefixTableSize(0),
-    "jelly-small" -> JellyOptions.smallGeneralized,
-    "jelly-small-noprefix" -> JellyOptions.smallGeneralized.withMaxPrefixTableSize(0),
+    "jelly-big" -> JellyOptions.BIG_GENERALIZED,
+    "jelly-big-noprefix" -> JellyOptions.BIG_GENERALIZED.clone().setMaxPrefixTableSize(0),
+    "jelly-small" -> JellyOptions.SMALL_GENERALIZED,
+    "jelly-small-noprefix" -> JellyOptions.SMALL_GENERALIZED.clone().setMaxPrefixTableSize(0),
   )
 
   val rdf4jFormats: Map[String, (rio.RDFFormat, Option[rio.RDFFormat])] = Map(

@@ -2,7 +2,7 @@ package eu.neverblink.jelly.benchmark
 
 import eu.neverblink.jelly.benchmark.traits.FlatSerDes
 import eu.neverblink.jelly.benchmark.util.{ConfigManager, Experiments}
-import eu.ostrzyciel.jelly.convert.jena.riot.*
+import eu.neverblink.jelly.convert.jena.riot.*
 import org.apache.commons.io.output.ByteArrayOutputStream
 import org.apache.jena.riot.RIOT
 
@@ -107,11 +107,7 @@ object FlatSerDesBench extends FlatSerDes:
           println(f"Try: $i, experiment: $experiment")
           if experiment.startsWith("jelly") then
             times(experiment) += time {
-              desJena(
-                outputStream.toInputStream,
-                JellyFormat.JELLY_BIG_ALL_FEATURES,
-                streamType
-              )
+              desJena(outputStream.toInputStream, JellyFormat.JELLY_BIG_ALL_FEATURES, streamType)
             }
           else
             times(experiment) += time {

@@ -4,7 +4,6 @@ package eu.neverblink.jelly.benchmark.util
 import eu.neverblink.jelly.convert.jena.{JenaConverterFactory, JenaDecoderConverter, JenaEncoderConverter}
 import eu.neverblink.jelly.convert.rdf4j.Rdf4jConverterFactory
 import eu.neverblink.jelly.core.JellyOptions
-import eu.neverblink.jelly.core.utils.TripleEncoder
 import eu.neverblink.jelly.stream.{DecoderFlow, JellyIo}
 import org.apache.commons.compress.archivers.tar.TarArchiveInputStream
 import org.apache.commons.io.IOUtils
@@ -29,8 +28,6 @@ object DataLoader:
   import Util.*
 
   given JenaConverterFactory = JenaConverterFactory.getInstance()
-  given JenaEncoderConverter = JenaConverterFactory.getInstance().encoderConverter()
-  given JenaDecoderConverter = JenaConverterFactory.getInstance().decoderConverter()
   
   val rdf4jConverterFactory = Rdf4jConverterFactory.getInstance()
 
@@ -178,7 +175,7 @@ object DataLoader:
     val is = GZIPInputStream(FileInputStream(path))
     val s = JellyIo.fromIoStream(is)
       .via(DecoderFlow.decodeAny.asGroupedStream(JellyOptions.DEFAULT_SUPPORTED_OPTIONS)
-        (using rdf4jConverterFactory, rdf4jConverterFactory.decoderConverter(), rdf4jConverterFactory.decoderConverter())
+        (using rdf4jConverterFactory)
       )
     (if elementSize == 0 then s else s.mapConcat(identity).grouped(elementSize))
       .map(it => it.iterator.toSeq)
@@ -200,7 +197,7 @@ object DataLoader:
     val is = GZIPInputStream(FileInputStream(path))
     JellyIo.fromIoStream(is)
       .via(DecoderFlow.decodeAny.asFlatStream(JellyOptions.DEFAULT_SUPPORTED_OPTIONS)
-        (using rdf4jConverterFactory, rdf4jConverterFactory.decoderConverter(), rdf4jConverterFactory.decoderConverter())
+        (using rdf4jConverterFactory)
       )
       .via(if statements.isDefined then Flow[Statement].take(statements.get) else Flow[Statement])
 

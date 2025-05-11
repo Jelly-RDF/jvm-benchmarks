@@ -109,7 +109,11 @@ object FlatSerDesBench extends FlatSerDes:
           println(f"Try: $i, experiment: $experiment")
           if experiment.startsWith("jelly") then
             times(experiment) += time {
-              desJelly(outputStream.toInputStream, streamType)
+              desJena(
+                outputStream.toInputStream,
+                JellyFormat.JELLY_BIG_ALL_FEATURES,
+                streamType
+              )
             }
           else
             times(experiment) += time {

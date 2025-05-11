@@ -112,7 +112,7 @@ object FlatSerDesRdf4jBench extends FlatSerDes:
           println(f"Try: $i, experiment: $experiment")
           if experiment.startsWith("jelly") then
             times(experiment) += time {
-              desJellyRdf4j(outputStream.toInputStream, streamType)
+              desRdf4j(outputStream.toInputStream, JELLY)
             }
           else
             times(experiment) += time {

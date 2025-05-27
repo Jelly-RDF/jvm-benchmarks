@@ -3,7 +3,7 @@
 //import com.typesafe.config.Config
 //import eu.neverblink.jelly.benchmark.util.*
 //import eu.neverblink.jelly.core.proto.v1.*
-//import eu.neverblink.jelly.stream.{DecoderFlow, EncoderFlow}
+//import eu.neverblink.jelly.pekko.stream.{DecoderFlow, EncoderFlow}
 //import org.apache.jena.rdf.model.Model
 //import org.apache.jena.riot.system.StreamRDFLib
 //import org.apache.jena.riot.{RDFParser, RDFWriter}

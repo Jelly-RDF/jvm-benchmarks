@@ -1,7 +1,7 @@
 //package eu.neverblink.jelly.benchmark.util
 //
 //import eu.neverblink.jelly.core.proto.v1.*
-//import eu.neverblink.jelly.stream.EncoderFlow
+//import eu.neverblink.jelly.pekko.stream.EncoderFlow
 //import org.apache.jena.rdf.model.Model
 //import org.apache.jena.sparql.core.DatasetGraph
 //import org.apache.pekko.NotUsed

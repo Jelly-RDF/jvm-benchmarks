@@ -4,7 +4,7 @@ package eu.neverblink.jelly.benchmark.util
 import eu.neverblink.jelly.convert.jena.{JenaConverterFactory, JenaDecoderConverter, JenaEncoderConverter}
 import eu.neverblink.jelly.convert.rdf4j.Rdf4jConverterFactory
 import eu.neverblink.jelly.core.JellyOptions
-import eu.neverblink.jelly.stream.{DecoderFlow, JellyIo}
+import eu.neverblink.jelly.pekko.stream.{DecoderFlow, JellyIo}
 import org.apache.commons.compress.archivers.tar.TarArchiveInputStream
 import org.apache.commons.io.IOUtils
 import org.apache.jena.graph.{Graph, GraphMemFactory, Triple}

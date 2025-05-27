@@ -6,7 +6,7 @@
 //import eu.neverblink.jelly.benchmark.util.*
 //import eu.neverblink.jelly.core.proto.v1.*
 //import eu.neverblink.jelly.grpc.RdfStreamServer
-//import eu.neverblink.jelly.stream.*
+//import eu.neverblink.jelly.pekko.stream.*
 //import org.apache.pekko.actor.typed.ActorSystem
 //import org.apache.pekko.grpc.GrpcClientSettings
 //import org.apache.pekko.stream.scaladsl.Source

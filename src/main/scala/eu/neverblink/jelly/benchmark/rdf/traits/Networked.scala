@@ -1,4 +1,4 @@
-//package eu.neverblink.jelly.benchmark.traits
+//package eu.neverblink.jelly.benchmark.rdf.traits
 //
 //import com.typesafe.config.Config
 //import eu.neverblink.jelly.benchmark.util.{ConfigManager, DataLoader, Experiments, GroupedData}

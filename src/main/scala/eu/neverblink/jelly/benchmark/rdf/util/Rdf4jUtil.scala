@@ -1,4 +1,4 @@
-package eu.neverblink.jelly.benchmark.util
+package eu.neverblink.jelly.benchmark.rdf.util
 
 import org.eclipse.rdf4j.rio.RDFHandler
 

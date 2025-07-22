@@ -1,4 +1,4 @@
-ThisBuild / scalaVersion := "3.6.3"
+ThisBuild / scalaVersion := "3.7.1"
 
 // Uncomment to use SNAPSHOT releases of Jelly
 resolvers +=
@@ -18,6 +18,7 @@ lazy val root = (project in file("."))
       "eu.neverblink.jelly" %% "jelly-pekko-stream" % jellyV,
       "eu.neverblink.jelly" % "jelly-jena" % jellyV,
       "eu.neverblink.jelly" % "jelly-rdf4j" % jellyV,
+      "eu.neverblink.jelly" % "jelly-jena-patch" % jellyV,
       "com.google.protobuf" % "protobuf-java" % "4.31.1",
       "org.json4s" %% "json4s-jackson" % "4.0.7",
       "org.apache.jena" % "jena-core" % jenaV,

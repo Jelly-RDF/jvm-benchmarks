@@ -1,4 +1,4 @@
-//package eu.neverblink.jelly.benchmark.traits
+//package eu.neverblink.jelly.benchmark.rdf.traits
 //
 //import eu.neverblink.jelly.benchmark.util.{DataLoader, GroupedData, GroupedDataRdf4j}
 //import eu.neverblink.jelly.benchmark.util.*

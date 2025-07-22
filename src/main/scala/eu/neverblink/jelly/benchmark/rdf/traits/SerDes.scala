@@ -1,10 +1,10 @@
-package eu.neverblink.jelly.benchmark.traits
+package eu.neverblink.jelly.benchmark.rdf.traits
 
-import eu.neverblink.jelly.benchmark.util.{ConfigManager, Experiments}
+import eu.neverblink.jelly.benchmark.rdf.util.Experiments
+import eu.neverblink.jelly.benchmark.rdf.util.Rdf4jUtil.NullRdfHandler
 import eu.neverblink.jelly.benchmark.util.*
-import eu.neverblink.jelly.benchmark.util.Rdf4jUtil.NullRdfHandler
-import org.apache.jena.riot.system.StreamRDFLib
 import org.apache.jena.riot
+import org.apache.jena.riot.system.StreamRDFLib
 import org.apache.pekko.actor.typed.ActorSystem
 import org.apache.pekko.actor.typed.scaladsl.Behaviors
 import org.eclipse.rdf4j.rio

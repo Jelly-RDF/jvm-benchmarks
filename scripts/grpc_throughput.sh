@@ -3,7 +3,7 @@
 set -eux
 
 JAVA_EXEC=$1
-CP="$2 eu.neverblink.jelly.benchmark.runGrpcThroughputBench"
+CP="$2 eu.neverblink.jelly.benchmark.rdf.runGrpcThroughputBench"
 BASE_DATA=$3
 PORT=$4
 

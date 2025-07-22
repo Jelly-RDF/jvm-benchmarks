@@ -1,5 +1,6 @@
-package eu.neverblink.jelly.benchmark.util
+package eu.neverblink.jelly.benchmark.rdf.util
 
+import eu.neverblink.jelly.benchmark.util.ConfigManager
 import eu.neverblink.jelly.core.proto.v1.*
 import org.apache.jena.riot.RDFFormat
 import org.eclipse.rdf4j.rio

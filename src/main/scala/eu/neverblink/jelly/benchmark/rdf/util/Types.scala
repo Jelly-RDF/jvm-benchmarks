@@ -1,4 +1,4 @@
-package eu.neverblink.jelly.benchmark.util
+package eu.neverblink.jelly.benchmark.rdf.util
 
 import org.apache.jena.graph.Triple
 import org.apache.jena.rdf.model.Model

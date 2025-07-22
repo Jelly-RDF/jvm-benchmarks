@@ -1,3 +1,5 @@
+package eu.neverblink.jelly.benchmark.rdf
+
 //package eu.neverblink.jelly.benchmark
 //
 //import eu.neverblink.jelly.benchmark.GrpcThroughputBench.initExperiments

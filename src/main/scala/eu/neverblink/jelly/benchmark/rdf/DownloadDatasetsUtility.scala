@@ -1,4 +1,4 @@
-package eu.neverblink.jelly.benchmark
+package eu.neverblink.jelly.benchmark.rdf
 
 import eu.neverblink.jelly.convert.jena.riot.JellyLanguage
 import org.apache.jena.rdf.model.{Model, ModelFactory}

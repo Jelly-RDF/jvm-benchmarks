@@ -3,7 +3,7 @@
 set -eux
 
 JAVA_EXEC=$1
-CP="$2 eu.neverblink.jelly.benchmark.runFlatSerDesRdf4jBench"
+CP="$2 eu.neverblink.jelly.benchmark.rdf.runFlatSerDesRdf4jBench"
 BASE_DATA=$3
 
 JAVA_OPTS="-Xms1G -Xmx32G"

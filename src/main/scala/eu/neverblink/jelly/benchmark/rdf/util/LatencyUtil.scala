@@ -1,3 +1,5 @@
+package eu.neverblink.jelly.benchmark.rdf.util
+
 //package eu.neverblink.jelly.benchmark.util
 //
 //import ConfigManager.LatencyCase

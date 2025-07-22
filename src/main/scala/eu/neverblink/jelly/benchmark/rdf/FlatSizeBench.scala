@@ -1,8 +1,8 @@
-package eu.neverblink.jelly.benchmark
+package eu.neverblink.jelly.benchmark.rdf
 
 import com.google.common.io.CountingOutputStream
-import eu.neverblink.jelly.benchmark.traits.{FlatSerDes, Size}
-import eu.neverblink.jelly.benchmark.util.{DataLoader, FlatDataStream, FlatDataStreamRdf4j, TripleOrQuad}
+import eu.neverblink.jelly.benchmark.rdf.traits.FlatSerDes
+import eu.neverblink.jelly.benchmark.rdf.util.{DataLoader, FlatDataStream, FlatDataStreamRdf4j, TripleOrQuad}
 import eu.neverblink.jelly.benchmark.traits.*
 import eu.neverblink.jelly.benchmark.util.*
 import eu.neverblink.jelly.convert.jena.riot.*
@@ -25,7 +25,7 @@ import scala.concurrent.duration.*
 import scala.concurrent.{Await, Future}
 
 object FlatSizeBench extends FlatSerDes, Size:
-  import eu.neverblink.jelly.benchmark.util.Experiments.*
+  import eu.neverblink.jelly.benchmark.rdf.util.Experiments.*
   import eu.neverblink.jelly.benchmark.util.Util.*
 
   private val sizes: mutable.Map[String, Long] = mutable.Map.empty

@@ -1,6 +1,7 @@
-package eu.neverblink.jelly.benchmark.util
+package eu.neverblink.jelly.benchmark.rdf.util
 
 //import eu.neverblink.jelly.convert.rdf4j.rdf4jConverterFactory
+import eu.neverblink.jelly.benchmark.util.Util
 import eu.neverblink.jelly.convert.jena.{JenaConverterFactory, JenaDecoderConverter, JenaEncoderConverter}
 import eu.neverblink.jelly.convert.rdf4j.Rdf4jConverterFactory
 import eu.neverblink.jelly.core.JellyOptions

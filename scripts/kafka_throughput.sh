@@ -3,7 +3,7 @@
 set -eux
 
 JAVA_EXEC=$1
-CP="$2 eu.neverblink.jelly.benchmark.runKafkaThroughputBench"
+CP="$2 eu.neverblink.jelly.benchmark.rdf.runKafkaThroughputBench"
 BASE_DATA=$3
 PROD_PORT=$4
 CONS_PORT=$5

@@ -1,20 +1,21 @@
-package eu.neverblink.jelly.benchmark
+package eu.neverblink.jelly.benchmark.rdf
 
-import eu.neverblink.jelly.benchmark.traits.FlatSerDes
-import eu.neverblink.jelly.benchmark.util.{ConfigManager, Experiments}
-import eu.neverblink.jelly.convert.jena.riot.*
+import eu.neverblink.jelly.benchmark.rdf.traits.FlatSerDes
+import eu.neverblink.jelly.benchmark.rdf.util.Experiments
+import eu.neverblink.jelly.benchmark.util.ConfigManager
+import eu.neverblink.jelly.convert.rdf4j.rio.{JellyFormat, JellyWriterSettings}
 import org.apache.commons.io.output.ByteArrayOutputStream
-import org.apache.jena.riot.RIOT
+import org.eclipse.rdf4j.rio.WriterConfig
 
 import java.io.OutputStream
 
-object FlatSerDesBench extends FlatSerDes:
-  import eu.neverblink.jelly.benchmark.util.Experiments.*
+object FlatSerDesRdf4jBench extends FlatSerDes:
+  import Experiments.*
   import eu.neverblink.jelly.benchmark.util.Util.*
 
   /**
-   * Benchmark for serializing and deserializing flat RDF streams.
-   * Here we test the DELIMITED variant of Jelly and Jena's statement-level streaming RDF serializers.
+   * Benchmark for serializing and deserializing flat RDF streams using RDF4J.
+   * Here we test the DELIMITED variant of Jelly and RDF4j's streaming RDF serializers.
    *
    * @param tasks "ser", "des", or "ser,des"
    * @param streamType "triples", "quads"
@@ -23,14 +24,14 @@ object FlatSerDesBench extends FlatSerDes:
    * @param sourceFilePath path to the source file (only jelly.gz files are supported)
    */
   @main
-  def runFlatSerDesBench(
+  def runFlatSerDesRdf4jBench(
     tasks: String, streamType: String, jellyFrameSize: Int, statements: Int, sourceFilePath: String
   ): Unit =
     val taskSeq = tasks.split(',')
-    loadData(sourceFilePath, streamType, statements)
+    loadDataRdf4j(sourceFilePath, statements)
 
     def saveResults(task: String): Unit =
-      saveRunInfo(s"flat_raw_$task", Map(
+      saveRunInfo(s"flat_raw_rdf4j_$task", Map(
         "statements" -> numStatements,
         "order" -> experiments,
         "times" -> times,
@@ -40,12 +41,12 @@ object FlatSerDesBench extends FlatSerDes:
       ))
 
     if taskSeq.contains("ser") then
-      initExperiment(flatStreaming = true, jena = true, rdf4j = false, streamType)
+      initExperiment(flatStreaming = true, jena = false, rdf4j = true, streamType)
       mainSer(jellyFrameSize)
       saveResults("ser")
       System.gc()
     if taskSeq.contains("des") then
-      initExperiment(flatStreaming = true, jena = true, rdf4j = false, streamType)
+      initExperiment(flatStreaming = true, jena = false, rdf4j = true, streamType)
       mainDes(jellyFrameSize)
       saveResults("des")
 
@@ -59,18 +60,19 @@ object FlatSerDesBench extends FlatSerDes:
       Thread.sleep(3000)
       println(f"Try: $i, experiment: $experiment")
       val outputStream = OutputStream.nullOutputStream
-      val context = RIOT.getContext.copy()
-      val format = if experiment.startsWith("jelly") then
-        val opts = getJellyOpts(experiment, streamType, grouped = false)
-        context.set(JellyLanguage.SYMBOL_STREAM_OPTIONS, opts)
-          .set(JellyLanguage.SYMBOL_FRAME_SIZE, 512)
-        JellyFormat.JELLY_SMALL_STRICT // this gets overridden by the context
-      else
-        getJenaFormat(experiment, streamType).get
-
+      val (format, config) = if experiment.startsWith("jelly") then (
+        JellyFormat.JELLY,
+        JellyWriterSettings.empty()
+          .setFrameSize(jellyFrameSize)
+          .setJellyOptions(getJellyOpts(experiment, streamType, grouped = false))
+      ) else (
+        getRdf4jFormat(experiment, streamType).get,
+        new WriterConfig()
+      )
+      
       try {
         times(experiment) += time {
-          serJena(format, context, outputStream)
+          serRdf4j(format, config, outputStream)
         }
       } catch {
         case e: Exception =>
@@ -87,15 +89,16 @@ object FlatSerDesBench extends FlatSerDes:
         // This would fail for example with jena-nt, 10M quads, assist-iot-weather-graphs.
         // It's safer to limit the number of statements to 5M.
         val outputStream = new ByteArrayOutputStream()
-        val context = RIOT.getContext.copy()
-        val format = if experiment.startsWith("jelly") then
-          val opts = getJellyOpts(experiment, streamType, grouped = false)
-          context.set(JellyLanguage.SYMBOL_STREAM_OPTIONS, opts)
-            .set(JellyLanguage.SYMBOL_FRAME_SIZE, 512)
-          JellyFormat.JELLY_SMALL_STRICT // this gets overridden by the context
-        else
-          getJenaFormat(experiment, streamType).get
-        serJena(format, context, outputStream)
+        val (format, config) = if experiment.startsWith("jelly") then (
+          JellyFormat.JELLY,
+          JellyWriterSettings.empty()
+            .setFrameSize(jellyFrameSize)
+            .setJellyOptions(getJellyOpts(experiment, streamType, grouped = false))
+        ) else (
+          getRdf4jFormat(experiment, streamType).get,
+          new WriterConfig()
+        )
+        serRdf4j(format, config, outputStream)
 
         if outputStream.size() <= 0 then
           throw new Exception("Serialization failed -- buffer size is larger than Int.MaxValue")
@@ -107,14 +110,13 @@ object FlatSerDesBench extends FlatSerDes:
           println(f"Try: $i, experiment: $experiment")
           if experiment.startsWith("jelly") then
             times(experiment) += time {
-              desJena(outputStream.toInputStream, JellyFormat.JELLY_BIG_ALL_FEATURES, streamType)
+              desRdf4j(outputStream.toInputStream, JellyFormat.JELLY)
             }
           else
             times(experiment) += time {
-              desJena(
+              desRdf4j(
                 outputStream.toInputStream,
-                getJenaFormat(experiment, streamType).get,
-                streamType
+                getRdf4jFormat(experiment, streamType).get
               )
             }
       } catch {

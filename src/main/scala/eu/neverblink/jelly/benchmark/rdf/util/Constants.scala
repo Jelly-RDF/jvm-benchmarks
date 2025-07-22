@@ -1,4 +1,4 @@
-package eu.neverblink.jelly.benchmark.util
+package eu.neverblink.jelly.benchmark.rdf.util
 
 import eu.neverblink.jelly.core.JellyOptions
 import org.apache.jena.riot

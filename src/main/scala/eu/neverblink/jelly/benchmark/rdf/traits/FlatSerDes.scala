@@ -1,16 +1,14 @@
-package eu.neverblink.jelly.benchmark.traits
+package eu.neverblink.jelly.benchmark.rdf.traits
 
-import eu.neverblink.jelly.benchmark.util.{DataLoader, FlatData, FlatDataRdf4j}
-import eu.neverblink.jelly.convert.jena.JenaConverterFactory
-import eu.neverblink.jelly.convert.rdf4j.Rdf4jConverterFactory
-import eu.neverblink.jelly.core.proto.v1.RdfStreamFrame
+import eu.neverblink.jelly.benchmark.rdf.util.*
+import eu.neverblink.jelly.benchmark.traits.FlatSerDesHelper
 import org.apache.jena.riot
 import org.apache.jena.riot.system.StreamRDFWriter
 import org.apache.jena.sparql.util.Context
 import org.eclipse.rdf4j.rio
 import org.eclipse.rdf4j.rio.WriterConfig
 
-import java.io.{InputStream, OutputStream}
+import java.io.OutputStream
 import scala.compiletime.uninitialized
 
 trait FlatSerDes extends SerDes:

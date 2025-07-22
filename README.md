@@ -41,6 +41,9 @@ The `scripts` directory contains scripts that automate running the benchmarks.
 
 The scripts assume you are using the `stream-mixed-rdfstar` profile of RiverBench – if you are using a different profile, you will need to modify the `DATASETS` variable in the scripts accordingly. Same goes for any changes to benchmark parameters.
 
+> [!WARNING]
+> The grouped, gRPC, and Kafka benchmarks were not yet ported to Jelly-JVM 3.x. You can still run them with Jelly-JVM 2.x using [the code from the `jelly-jvm-2.x` branch](https://github.com/Jelly-RDF/jvm-benchmarks/tree/jelly-jvm-2.x).
+
 - `./scripts/flat_size.sh [path-to-java-executable] [path-to-benchmark-jar] [directory-with-datasets]`
   - Runs the serialization size benchmark for flat RDF streams (streams of triples/quads). This benchmark runs with both Jena and RDF4J.
   - `[path-to-java-executable]` is the path to the Java executable to use. For example: `/usr/bin/java`.

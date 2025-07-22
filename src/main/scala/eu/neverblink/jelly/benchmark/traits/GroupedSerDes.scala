@@ -69,7 +69,7 @@
 //    val frame = RdfStreamFrame(buf.toList)
 //    buf.clear()
 //    frame
-//  
+//
 //  protected final def serJelly(opt: RdfStreamOptions, closure: RdfStreamFrame => Unit): Unit =
 //    val buffer = ListBuffer.empty[RdfStreamRow]
 //    val encoder = JenaConverterFactory.encoder(ProtoEncoder.Params(
@@ -113,7 +113,7 @@
 //      case model: Model => writer.source(model.getGraph)
 //      case dataset: DatasetGraph => writer.source(dataset)
 //    writer.output(outputStream)
-//    
+//
 //  protected final def serRdf4j(sourceData: Seq[Statement], format: rio.RDFFormat, outputStream: OutputStream): Unit =
 //    val writer = rio.Rio.createWriter(format, outputStream)
 //    writer.startRDF()

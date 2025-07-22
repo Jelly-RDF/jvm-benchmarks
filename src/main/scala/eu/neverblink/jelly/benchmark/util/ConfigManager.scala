@@ -8,7 +8,8 @@ import scala.jdk.DurationConverters.*
 
 object ConfigManager:
   val config: Config = ConfigFactory.load()
-  
+
+  // TODO: move Jelly-RDF config to a nested `rdf` object
   val benchmarkOutputDir: String = config.getString("jelly.benchmark.output-dir")
 
   // Number of repeats for experiments that are CPU-bound
@@ -47,3 +48,9 @@ object ConfigManager:
       .split(',')
       .map(_.trim.prependedAll("rdf4j-"))
       .toSeq
+
+  /** Config for Jelly-Patch benchmarks */
+  object patch:
+    private val c = config.getConfig("jelly.patch")
+    val outputDir: String = c.getString("output-dir")
+    val inputFile: String = c.getString("input-file")

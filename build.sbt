@@ -2,11 +2,11 @@ ThisBuild / scalaVersion := "3.6.3"
 
 // Uncomment to use SNAPSHOT releases of Jelly
 resolvers +=
-  "Sonatype OSS Snapshots" at "https://s01.oss.sonatype.org/content/repositories/snapshots"
+  "Sonatype OSS Snapshots" at "https://central.sonatype.com/repository/maven-snapshots/"
 
-val jellyV = "2.8.0+16-3bae4311-SNAPSHOT"
+val jellyV = "3.1.0+9-edc6daa8-SNAPSHOT"
 val jenaV = "5.3.0"
-val rdf4jV = "5.1.2"
+val rdf4jV = "5.1.3"
 lazy val pekkoV = "1.1.3"
 lazy val pekkoGrpcV = "1.1.1"
 
@@ -14,10 +14,11 @@ lazy val root = (project in file("."))
   .settings(
     name := "benchmarks",
     libraryDependencies ++= Seq(
-      "eu.ostrzyciel.jelly" %% "jelly-grpc" % jellyV,
-      "eu.ostrzyciel.jelly" %% "jelly-stream" % jellyV,
-      "eu.ostrzyciel.jelly" %% "jelly-jena" % jellyV,
-      "eu.ostrzyciel.jelly" %% "jelly-rdf4j" % jellyV,
+      // "eu.neverblink.jelly" %% "jelly-grpc" % jellyV,
+      "eu.neverblink.jelly" %% "jelly-pekko-stream" % jellyV,
+      "eu.neverblink.jelly" % "jelly-jena" % jellyV,
+      "eu.neverblink.jelly" % "jelly-rdf4j" % jellyV,
+      "com.google.protobuf" % "protobuf-java" % "4.31.0",
       "org.json4s" %% "json4s-jackson" % "4.0.7",
       "org.apache.jena" % "jena-core" % jenaV,
       "org.apache.jena" % "jena-arq" % jenaV,

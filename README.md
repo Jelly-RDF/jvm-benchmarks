@@ -25,7 +25,7 @@ The resulting JAR will be placed in `target/scala-3.*/benchmarks-assembly-*.jar`
 The benchmarks can read RDF data from compressionMode-compressed Jelly files (preferred) or from compressed .tar.gz files. RiverBench datasets are distributed in both of these formats ([see documentation](https://w3id.org/riverbench/v/dev/documentation/dataset-release-format)), but Jelly is much faster to read from. You can manually download the datasets, but we recommend using the built-in download utility:
 
 ```shell
-java -cp [path-to-benchmark-jar] eu.ostrzyciel.jelly.benchmark.runDownloadDatasetsUtility [profile] [version] [size] [output-directory]
+java -cp [path-to-benchmark-jar] eu.neverblink.jelly.benchmark.runDownloadDatasetsUtility [profile] [version] [size] [output-directory]
 ```
 
 - `[profile]` is the RiverBench profile to download, for example `stream-mixed`. See a list of available profiles [here](https://w3id.org/riverbench/v/dev/categories).
@@ -40,6 +40,9 @@ The script will download the datasets as `.jelly.gz` files.
 The `scripts` directory contains scripts that automate running the benchmarks.
 
 The scripts assume you are using the `stream-mixed-rdfstar` profile of RiverBench – if you are using a different profile, you will need to modify the `DATASETS` variable in the scripts accordingly. Same goes for any changes to benchmark parameters.
+
+> [!WARNING]
+> The grouped, gRPC, and Kafka benchmarks were not yet ported to Jelly-JVM 3.x. You can still run them with Jelly-JVM 2.x using [the code from the `jelly-jvm-2.x` branch](https://github.com/Jelly-RDF/jvm-benchmarks/tree/jelly-jvm-2.x).
 
 - `./scripts/flat_size.sh [path-to-java-executable] [path-to-benchmark-jar] [directory-with-datasets]`
   - Runs the serialization size benchmark for flat RDF streams (streams of triples/quads). This benchmark runs with both Jena and RDF4J.

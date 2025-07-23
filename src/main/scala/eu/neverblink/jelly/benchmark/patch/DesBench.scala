@@ -26,7 +26,11 @@ object DesBench:
       // Output stream for serialization
       val os = ByteArrayOutputStream()
       val writer = SerDesUtil.getWriter(implementation, os)
-      SerDesUtil.readInputDataset(writer)
+      SerDesUtil.readInputDataset(
+        writer,
+        // 2 GiB limit, a bit less than Int.MaxValue to avoid issues with array size
+        () => os.size() < 2 * 1000 * 1000 * 1000
+      )
       if os.size() < 0 then
         throw new IllegalStateException("Serialized data is larger than Int.MaxValue. " +
           "Reduce benchmark size with `max-segments` config option.")

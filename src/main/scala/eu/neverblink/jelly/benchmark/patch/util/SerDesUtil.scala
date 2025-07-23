@@ -43,7 +43,7 @@ object SerDesUtil:
       throw new IllegalArgumentException(s"Unknown statement type: ${ConfigManager.patch.statementType}")
 
 
-  def readInputDataset(dest: RDFChanges): Unit =
+  def readInputDataset(dest: RDFChanges, continueCheck: () => Boolean = () => true): Unit =
     val inputFile = java.io.File(ConfigManager.patch.inputFile)
     val maxSegments = ConfigManager.patch.maxSegments
     var segmentCount = 0
@@ -51,11 +51,12 @@ object SerDesUtil:
       override def segment(): Unit =
         super.segment()
         segmentCount += 1
-        if segmentCount >= maxSegments then
+        if segmentCount >= maxSegments || !continueCheck() then
           throw MaxSegmentsReachedException
     }
     println(f"Reading patch dataset from ${inputFile.getAbsolutePath} ...")
     Using.resource(FileInputStream(inputFile)) { fis =>
+      wrapper.start()
       val reader = RdfPatchReaderJelly(
         RdfPatchReaderJelly.Options(),
         JenaPatchConverterFactory.getInstance(),
@@ -68,5 +69,6 @@ object SerDesUtil:
           println(f"Max segments reached: $maxSegments, finishing")
         case t => throw t
       }
+      wrapper.finish()
       println(f"Read $segmentCount segments from the patch dataset.")
     }

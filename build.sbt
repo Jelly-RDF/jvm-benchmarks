@@ -4,7 +4,7 @@ ThisBuild / scalaVersion := "3.7.1"
 resolvers +=
   "Sonatype OSS Snapshots" at "https://central.sonatype.com/repository/maven-snapshots/"
 
-val jellyV = "3.2.1+9-c3cfdbe6-SNAPSHOT"
+val jellyV = "3.3.1+3-625a66af-SNAPSHOT"
 val jenaV = "5.3.0"
 val jmhV = "1.37"
 val rdf4jV = "5.1.4"

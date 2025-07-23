@@ -54,3 +54,4 @@ object ConfigManager:
     private val c = config.getConfig("jelly.patch")
     val outputDir: String = c.getString("output-dir")
     val inputFile: String = c.getString("input-file")
+    val statementType: String = c.getString("statement-type")

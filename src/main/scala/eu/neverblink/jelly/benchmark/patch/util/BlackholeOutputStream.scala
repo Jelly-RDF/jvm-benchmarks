@@ -4,7 +4,7 @@ import org.openjdk.jmh.infra.Blackhole
 
 import java.io.OutputStream
 
-class BlackholeOutputStream(blackhole: Blackhole) extends OutputStream:
+final class BlackholeOutputStream(blackhole: Blackhole) extends OutputStream:
   private var closed: Boolean = false
 
   private def ensureOpen(): Unit =

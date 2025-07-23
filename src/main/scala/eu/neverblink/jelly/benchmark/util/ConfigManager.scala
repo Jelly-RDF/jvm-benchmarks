@@ -55,3 +55,5 @@ object ConfigManager:
     val outputDir: String = c.getString("output-dir")
     val inputFile: String = c.getString("input-file")
     val statementType: String = c.getString("statement-type")
+    val maxSegments: Long = if c.getLong("max-segments") <= 0 then Long.MaxValue
+      else c.getLong("max-segments")

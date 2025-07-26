@@ -3,6 +3,7 @@ package eu.neverblink.jelly.benchmark.patch.extras
 import eu.neverblink.jelly.convert.jena.patch.*
 import eu.neverblink.jelly.core.patch.JellyPatchOptions
 import eu.neverblink.jelly.core.proto.v1.patch.*
+import org.apache.jena.rdfpatch.changes.RDFChangesWrapper
 import org.apache.jena.rdfpatch.{RDFChanges, RDFPatchOps}
 
 import java.io.{File, FileInputStream, FileOutputStream}
@@ -16,8 +17,10 @@ object PreprocessPatchDataset:
    * This is currently a few hard-coded modes for specific input formats:
    *
    * - `jena-log`: Reads Jena log files (patches) and converts them to Jelly-Patch format.
-   * - `jelly`: Reads a Jelly-Patch file that is a concatenation of multiple Jelly-Patch streams
-   *   and merges them into one file.
+   * - `jelly-multiple`: Reads a Jelly-Patch file that is a concatenation of multiple Jelly-Patch
+   *   streams and merges them into one file.
+   * - `jelly-resplit`: Reads a Jelly-Patch file that does not have delimiters between patches and
+   *    resplits it along transaction boundaries.
    *
    * @param input input directory or file containing the patch dataset.
    * @param outputFile output file where the preprocessed Jelly-Patch will be written.
@@ -33,8 +36,10 @@ object PreprocessPatchDataset:
       )
       if preprocessingMode == "jena-log" then
         preprocessJenaLog(input, writer)
-      else if preprocessingMode == "jelly" then
-        preprocessJelly(input, writer)
+      else if preprocessingMode == "jelly-multiple" then
+        preprocessJellyMultiple(input, writer)
+      else if preprocessingMode == "jelly-resplit" then
+        preprocessJellyResplit(input, writer)
       else
         throw new IllegalArgumentException(s"Unknown preprocessing mode: $preprocessingMode")
     }
@@ -60,7 +65,7 @@ object PreprocessPatchDataset:
         }
       }
 
-  private def preprocessJelly(inputFile: String, dest: RDFChanges): Unit =
+  private def preprocessJellyMultiple(inputFile: String, dest: RDFChanges): Unit =
     println(f"Converting...")
     Using.resource(FileInputStream(File(inputFile))) { fis =>
       // Jelly-Patch parser that can handle frames encoded independently of each other.
@@ -79,4 +84,25 @@ object PreprocessPatchDataset:
           // println(frame)
           decoder.ingestFrame(frame)
         }
+    }
+
+  private def preprocessJellyResplit(inputFile: String, dest: RDFChanges): Unit =
+    println(f"Converting...")
+    Using.resource(FileInputStream(File(inputFile))) { fis =>
+      val handler = new RDFChangesWrapper(dest) {
+        override def txnCommit(): Unit = {
+          segment()
+          super.txnCommit()
+        }
+
+        override def txnAbort(): Unit = {
+          segment()
+          super.txnAbort()
+        }
+      }
+      RdfPatchReaderJelly(
+        RdfPatchReaderJelly.Options(),
+        JenaPatchConverterFactory.getInstance(),
+        fis
+      ).apply(handler)
     }

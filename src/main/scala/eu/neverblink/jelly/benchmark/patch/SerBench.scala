@@ -22,7 +22,7 @@ object SerBench:
   class BenchInput:
     var jenaChangesCollector: JenaChangesCollector = uninitialized
 
-    @Param(Array("jelly", "jena-text", "jena-binary", "jena-sparql-update"))
+    @Param(Array("jelly", "jena-binary" , "jena-text", "jena-binary", "jena-sparql-update"))
     var implementation: String = uninitialized
 
     @Setup(Level.Trial)
@@ -39,7 +39,7 @@ class SerBench:
   import SerBench.*
 
   @Benchmark
-  @OutputTimeUnit(TimeUnit.NANOSECONDS)
+  @OutputTimeUnit(TimeUnit.MICROSECONDS)
   @BenchmarkMode(Array(Mode.SingleShotTime))
   def jelly(blackhole: Blackhole, input: BenchInput): Unit =
     val writer = input.getWriter(blackhole)

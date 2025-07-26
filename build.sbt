@@ -4,7 +4,7 @@ ThisBuild / scalaVersion := "3.7.1"
 resolvers +=
   "Sonatype OSS Snapshots" at "https://central.sonatype.com/repository/maven-snapshots/"
 
-val jellyV = "3.3.2"
+val jellyV = "3.3.2+9-d7945cf0-SNAPSHOT"
 val jenaV = "5.3.0"
 val jmhV = "1.37"
 val rdf4jV = "5.1.4"
@@ -26,6 +26,7 @@ lazy val root = (project in file("."))
       "org.json4s" %% "json4s-jackson" % "4.0.7",
       "org.apache.jena" % "jena-core" % jenaV,
       "org.apache.jena" % "jena-arq" % jenaV,
+      "org.apache.jena" % "jena-rdfpatch" % jenaV,
       "org.apache.pekko" %% "pekko-actor-typed" % pekkoV,
       "org.apache.pekko" %% "pekko-discovery" % pekkoV,
       "org.apache.pekko" %% "pekko-grpc-runtime" % pekkoGrpcV,

@@ -2,6 +2,7 @@ package eu.neverblink.jelly.benchmark.patch.util
 
 import eu.neverblink.jelly.benchmark.util.ConfigManager
 import eu.neverblink.jelly.convert.jena.patch.*
+import eu.neverblink.jelly.core.patch.JellyPatchOptions
 import eu.neverblink.jelly.core.proto.v1.patch.PatchStatementType
 import org.apache.jena.atlas.io.Writer2
 import org.apache.jena.rdfpatch.RDFChanges
@@ -19,7 +20,11 @@ object SerDesUtil:
   def getWriter(implementation: String, output: OutputStream): RDFChanges =
     implementation match
       case "jelly" => RdfPatchWriterJelly(
-        RdfPatchWriterJelly.Options(),
+        RdfPatchWriterJelly.Options(
+          JellyPatchOptions.BIG_STRICT.clone().setMaxPrefixTableSize(1024),
+          512,
+          true
+        ),
         JenaPatchConverterFactory.getInstance(),
         output
       )

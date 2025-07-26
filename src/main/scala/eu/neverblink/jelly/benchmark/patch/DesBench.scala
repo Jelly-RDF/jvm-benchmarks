@@ -54,7 +54,7 @@ class DesBench:
   import DesBench.*
 
   @Benchmark
-  @OutputTimeUnit(TimeUnit.NANOSECONDS)
+  @OutputTimeUnit(TimeUnit.MICROSECONDS)
   @BenchmarkMode(Array(Mode.SingleShotTime))
   def deserialize(blackhole: Blackhole, input: BenchInput): Unit =
     val reader = input.getReader

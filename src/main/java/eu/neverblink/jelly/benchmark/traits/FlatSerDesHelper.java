@@ -1,6 +1,8 @@
 package eu.neverblink.jelly.benchmark.traits;
 
+import eu.neverblink.jelly.convert.jena.patch.JenaChangesCollector;
 import org.apache.jena.graph.Triple;
+import org.apache.jena.rdfpatch.RDFChanges;
 import org.apache.jena.riot.system.StreamRDF;
 import org.apache.jena.sparql.core.Quad;
 import org.eclipse.rdf4j.model.Statement;

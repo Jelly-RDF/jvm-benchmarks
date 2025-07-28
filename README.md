@@ -10,7 +10,38 @@ You need at least Java 17 to compile the benchmark code. To run the benchmarks, 
 
 This code was tested only on Linux. It may work on other platforms, but this wasn't tested.
 
-## Compiling
+## Jelly-Patch benchmarks
+
+### Datasets
+
+Datasets can be downloaded from Zenodo: [10.5281/zenodo.16498682](https://doi.org/10.5281/zenodo.16498682)
+
+Download the `*.jellyp.gz` files and extract them to a directory of your choice. The benchmarks will read the datasets from this directory.
+
+### Running the benchmarks
+
+The serialization/deserialization benchmarks are implemented with [JMH](https://openjdk.org/projects/code-tools/jmh/). To compile and run the benchmarks, you need to first install [sbt](https://www.scala-sbt.org/). Note down the path to the `sbt` installation directory, as you will need it later.
+
+The `scripts/patch` directory contains a script that automates running the benchmarks:
+
+- `./scripts/patch/ser_des.sh [path-to-java-executable] [path-to-sbt-directory] [directory-with-datasets]`
+    - Runs the serialization/deserialization throughput benchmark RDF Patch streams.
+    - `[path-to-java-executable]` is the path to the Java executable to use. For example: `/usr/bin/java`.
+    - `[path-to-sbt-directory]` is the path to the `sbt` installation directory.
+    - `[directory-with-datasets]` is the directory with the downloaded datasets.
+
+Running the complete suite can take 12–24 hours, depending on your hardware.
+
+To run the size benchmark, [first compile the assembly using instructions below](#compiling), then run the following command:
+
+```shell
+java -Djelly.patch.input-file=[jellyp-file-to-use] \
+  -cp [path-to-benchmark-jar] eu.neverblink.jelly.benchmark.patch.runPatchSizeBench
+```
+
+## Jelly-RDF benchmarks
+
+### Compiling
 
 Use [sbt](https://www.scala-sbt.org/) to compile the project into a single JAR file:
 
@@ -20,7 +51,7 @@ sbt assembly
 
 The resulting JAR will be placed in `target/scala-3.*/benchmarks-assembly-*.jar`. Use the path to the built JAR as the second argument to the benchmark scripts.
 
-## Downloading the datasets
+### Downloading the datasets
 
 The benchmarks can read RDF data from compressionMode-compressed Jelly files (preferred) or from compressed .tar.gz files. RiverBench datasets are distributed in both of these formats ([see documentation](https://w3id.org/riverbench/v/dev/documentation/dataset-release-format)), but Jelly is much faster to read from. You can manually download the datasets, but we recommend using the built-in download utility:
 
@@ -35,7 +66,7 @@ java -cp [path-to-benchmark-jar] eu.neverblink.jelly.benchmark.rdf.runDownloadDa
 
 The script will download the datasets as `.jelly.gz` files.
 
-## Running the benchmarks
+### Running the benchmarks
 
 The `scripts` directory contains scripts that automate running the benchmarks.
 
@@ -73,11 +104,11 @@ The scripts assume you are using the `stream-mixed-rdfstar` profile of RiverBenc
   - Runs the end-to-end latency benchmark using Apache Kafka, on Jena.
   - This script requires a running Kafka cluster. See the section on running Kafka below. 
 
-### Running Kafka
+#### Running Kafka
 
 For Kafka benchmarks, you need a local Kafka cluster. You can run it yourself, but we recommend using the provided Docker Compose configuration. You can find it along with further instructions in the `scripts/kafka` directory. By default, the broker will listen on ports 9092, 9093, and 9094.
 
-### Network emulation for end-to-end streaming benchmarks
+#### Network emulation for end-to-end streaming benchmarks
 
 To emulate specific network conditions in gRPC and Kafka benchmarks, you can use the [netem kernel module in Linux](https://man7.org/linux/man-pages/man8/tc-netem.8.html).
 
@@ -87,14 +118,14 @@ In our benchmarks we used the following configuration:
 - Ports 9093 and 8421: 100 Mbit/s bandwidth, 10 ms latency
 - Ports 9094 and 8422: 50 Mbit/s bandwidth, 15 ms latency
 
-#### Enable netem (needs root privileges)
+##### Enable netem (needs root privileges)
 
 ```shell
 ./scripts/set_netem.sh 10 100 9093 8421 2
 ./scripts/set_netem.sh 15 50 9094 8422 3
 ```
 
-#### Check if netem is running
+##### Check if netem is running
 
 ```shell
 time nc -zw30 localhost 9092
@@ -104,7 +135,7 @@ time nc -zw30 localhost 9094
 
 The commands should show latencies of ~0ms, ~20ms, ~30ms (round-trip).
 
-#### Disable netem
+##### Disable netem
 
 ```shell
 sudo tc qdisc del dev lo root

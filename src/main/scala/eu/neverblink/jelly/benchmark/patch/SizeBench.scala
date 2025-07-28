@@ -2,14 +2,13 @@ package eu.neverblink.jelly.benchmark.patch
 
 import eu.neverblink.jelly.benchmark.patch.util.SerDesUtil
 import org.apache.commons.io.output.CountingOutputStream
-import org.apache.jena.rdfpatch.changes.{PatchSummary, RDFChangesCounter, RDFChangesN}
+import org.apache.jena.rdfpatch.changes.{RDFChangesCounter, RDFChangesN}
 
 import java.io.OutputStream
 
 object SizeBench:
   @main
   def runPatchSizeBench(): Unit =
-    println(PatchSummary())
     val sinks = Seq(
       "jena-text",
       "jena-binary",

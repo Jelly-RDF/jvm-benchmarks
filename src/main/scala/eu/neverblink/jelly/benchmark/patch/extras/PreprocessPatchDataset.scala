@@ -91,13 +91,13 @@ object PreprocessPatchDataset:
     Using.resource(FileInputStream(File(inputFile))) { fis =>
       val handler = new RDFChangesWrapper(dest) {
         override def txnCommit(): Unit = {
-          segment()
           super.txnCommit()
+          segment()
         }
 
         override def txnAbort(): Unit = {
-          segment()
           super.txnAbort()
+          segment()
         }
       }
       RdfPatchReaderJelly(
